@@ -24,7 +24,7 @@ O projeto utiliza uma arquitetura baseada em **Microserviços** para garantir es
 * **Banco de Dados:** MySQL para persistência de dados estruturados.
 
 ## 🛠️ Tecnologias
-* **Linguagens:** Python, JavaScript, SQL.
+* **Linguagens:** React e SQL.
 * **Frameworks:** Django, Flask, React.
 * **Bibliotecas de Automação:** Scrapy, Selenium.
 * **Estilização:** CSS3 / Tailwind (ou Framework de preferência).
