@@ -1,4 +1,4 @@
-# 🚀 Plataforma Inteligente de Centralização de Vagas
+# Hirefy
 
 > **Status do Projeto:** 🛠️ Em Desenvolvimento
 
