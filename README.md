@@ -34,6 +34,6 @@ O projeto utiliza uma arquitetura baseada em **Microserviços** para garantir es
 | :--- | :--- |
 | **Ian Kilwiny** | Gerente de Projetos / Backend |
 | **Marcus Vinícius** | Analista de Requisitos / Backend |
-| **Reullyson** | Backend / Frontend / UI/UX |
+| **Reullyson** | Backend / Frontend / 
 | **Ivo** | Frontend |
 | **Bruno** | UI/UX Design / Frontend |
