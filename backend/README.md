@@ -1,6 +1,6 @@
-# HireFly Backend
+# Hirefy Backend
 
-Boilerplate inicial do backend para o sistema HireFly.
+Boilerplate inicial do backend para o sistema Hirefy.
 
 ## 🚀 Como rodar
 

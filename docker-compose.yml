@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: hirefy-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+      - ./db.sqlite3:/app/db.sqlite3
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=django-insecure-hirefy-docker-key
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+    networks:
+      - hirefy-network
+    restart: unless-stopped
+
+  frontend:
+    image: node:20-slim
+    container_name: hirefy-frontend
+    working_dir: /app/frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app/frontend
+    environment:
+      - VITE_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    command: npm run dev
+    networks:
+      - hirefy-network
+    restart: unless-stopped
+
+networks:
+  hirefy-network:
+    driver: bridge

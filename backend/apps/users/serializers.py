@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Experience, Course, Student
-from .validators import validate_ifce_email, validate_password_strength
+from .validators import validate_password_strength
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.apps import apps
 
 User = get_user_model()
 
@@ -20,21 +22,25 @@ class UserSerializer(serializers.ModelSerializer):
     courses = CourseSerializer(many=True, required=False)
     
     # Campos do Student (Perfil)
-    full_name = serializers.CharField(write_only=True)
-    enrollment = serializers.CharField(write_only=True)
-    city = serializers.CharField(write_only=True)
-    semester = serializers.IntegerField(write_only=True)
+    full_name = serializers.CharField(write_only=True, required=False)
+    enrollment = serializers.CharField(write_only=True, required=False)
+    city = serializers.CharField(write_only=True, required=False)
+    semester = serializers.IntegerField(write_only=True, required=False)
     github_url = serializers.URLField(write_only=True, required=False, allow_null=True)
     linkedin_url = serializers.URLField(write_only=True, required=False, allow_null=True)
     portfolio_url = serializers.URLField(write_only=True, required=False, allow_null=True)
 
+    # Campos da Empresa (Recrutador)
+    cnpj = serializers.CharField(write_only=True, required=False)
+    company_name = serializers.CharField(write_only=True, required=False)
+
     password = serializers.CharField(
         write_only=True, 
-        required=False, 
+        required=True, 
         style={'input_type': 'password'},
         validators=[validate_password_strength]
     )
-    email = serializers.EmailField(validators=[validate_ifce_email])
+    email = serializers.EmailField()
 
     class Meta:
         model = User
@@ -42,38 +48,107 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'nome', 'email', 'password', 'user_type',
             'full_name', 'enrollment', 'city', 'semester', 
             'github_url', 'linkedin_url', 'portfolio_url',
+            'cnpj', 'company_name',
             'experiences', 'courses', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def validate_email(self, value):
+        user_type = self.initial_data.get('user_type', 'ALUNO')
+        if user_type == 'ALUNO' and not value.endswith('@aluno.ifce.edu.br'):
+            raise serializers.ValidationError('Apenas emails @aluno.ifce.edu.br são permitidos para estudantes.')
+        return value
+
+    def validate(self, data):
+        user_type = data.get('user_type', 'ALUNO')
+        
+        if user_type == 'ALUNO':
+            required_student_fields = ['enrollment', 'city', 'semester']
+            for field in required_student_fields:
+                if not data.get(field):
+                    raise serializers.ValidationError({field: f"Este campo é obrigatório para alunos."})
+        
+        elif user_type == 'RECRUTADOR':
+            required_company_fields = ['company_name', 'cnpj']
+            for field in required_company_fields:
+                if not data.get(field):
+                    raise serializers.ValidationError({field: f"Este campo é obrigatório para empresas."})
+        
+        return data
+
     def create(self, validated_data):
+        user_type = validated_data.get('user_type', 'ALUNO')
         experiences_data = validated_data.pop('experiences', [])
         courses_data = validated_data.pop('courses', [])
         
-        # Extrair dados do Student
-        student_data = {
-            'full_name': validated_data.pop('full_name'),
-            'enrollment': validated_data.pop('enrollment'),
-            'city': validated_data.pop('city'),
-            'semester': validated_data.pop('semester'),
-            'github_url': validated_data.pop('github_url', None),
-            'linkedin_url': validated_data.pop('linkedin_url', None),
-            'portfolio_url': validated_data.pop('portfolio_url', None),
-        }
-        
+        # Extrair dados do Student ou Company
+        student_data = None
+        company_data = None
+
+        if user_type == 'ALUNO':
+            student_data = {
+                'full_name': validated_data.pop('full_name', validated_data.get('nome')),
+                'enrollment': validated_data.pop('enrollment'),
+                'city': validated_data.pop('city'),
+                'semester': validated_data.pop('semester'),
+                'github_url': validated_data.pop('github_url', None),
+                'linkedin_url': validated_data.pop('linkedin_url', None),
+                'portfolio_url': validated_data.pop('portfolio_url', None),
+            }
+        elif user_type == 'RECRUTADOR':
+            company_data = {
+                'name': validated_data.pop('company_name'),
+                'cnpj': validated_data.pop('cnpj'),
+            }
+            # Limpar campos de estudante se vierem
+            validated_data.pop('full_name', None)
+            validated_data.pop('enrollment', None)
+            validated_data.pop('city', None)
+            validated_data.pop('semester', None)
+
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
         
-        # Criação do perfil do aluno
-        student = Student.objects.create(user=user, **student_data)
+        if user_type == 'ALUNO' and student_data:
+            student = Student.objects.create(user=user, **student_data)
+            for exp in experiences_data:
+                Experience.objects.create(student=student, **exp)
+            for course in courses_data:
+                Course.objects.create(student=student, **course)
         
-        for exp in experiences_data:
-            Experience.objects.create(student=student, **exp)
-        
-        for course in courses_data:
-            Course.objects.create(student=student, **course)
+        elif user_type == 'RECRUTADOR' and company_data:
+            Company = apps.get_model('jobs', 'Company')
+            Company.objects.create(recruiter=user, **company_data)
             
         return user
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['user_type'] = instance.user_type
+        
+        if instance.user_type == 'ALUNO':
+            try:
+                student = instance.student_profile
+                representation['full_name'] = student.full_name
+                representation['enrollment'] = student.enrollment
+                representation['city'] = student.city
+                representation['semester'] = student.semester
+                representation['github_url'] = student.github_url
+                representation['linkedin_url'] = student.linkedin_url
+                representation['portfolio_url'] = student.portfolio_url
+                
+                representation['experiences'] = ExperienceSerializer(student.experiences.all(), many=True).data
+                representation['courses'] = CourseSerializer(student.courses.all(), many=True).data
+            except Student.DoesNotExist:
+                pass
+        elif instance.user_type == 'RECRUTADOR':
+            try:
+                company = instance.company
+                representation['company_name'] = company.name
+                representation['cnpj'] = company.cnpj
+            except Exception:
+                pass
+        return representation
 
     def update(self, instance, validated_data):
         experiences_data = validated_data.pop('experiences', None)
@@ -108,21 +183,3 @@ class UserSerializer(serializers.ModelSerializer):
                 Course.objects.create(student=student, **course)
 
         return instance
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        try:
-            student = instance.student_profile
-            representation['full_name'] = student.full_name
-            representation['enrollment'] = student.enrollment
-            representation['city'] = student.city
-            representation['semester'] = student.semester
-            representation['github_url'] = student.github_url
-            representation['linkedin_url'] = student.linkedin_url
-            representation['portfolio_url'] = student.portfolio_url
-            
-            representation['experiences'] = ExperienceSerializer(student.experiences.all(), many=True).data
-            representation['courses'] = CourseSerializer(student.courses.all(), many=True).data
-        except Student.DoesNotExist:
-            pass
-        return representation

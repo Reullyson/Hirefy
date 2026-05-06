@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script para testar a API do HireFly
+# Script para testar a API do Hirefy
 
 BASE_URL="http://127.0.0.1:8000/api"
 

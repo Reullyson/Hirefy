@@ -24,7 +24,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-white font-bold text-sm">HF</span>
             </div>
             <div>
-              <p className="text-white font-semibold text-sm leading-tight">HireFly</p>
+              <p className="text-white font-semibold text-sm leading-tight">Hirefy</p>
               <p className="text-sidebar-foreground text-[10px] leading-tight mt-0.5">IFCE Campus Cedro</p>
             </div>
           </div>

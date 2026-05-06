@@ -4,7 +4,7 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-hirefly-placeholder-key'
+SECRET_KEY = 'django-insecure-hirefy-placeholder-key'
 
 DEBUG = True
 
@@ -25,6 +25,7 @@ INSTALLED_APPS = [
 
     # Local apps
     'apps.users',
+    'apps.jobs',
 ]
 
 MIDDLEWARE = [
