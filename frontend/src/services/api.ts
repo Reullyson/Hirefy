@@ -77,3 +77,15 @@ export const companyService = {
   create: (data: any) => api.post('/companies/', data),
   update: (id: string | number, data: any) => api.put(`/companies/${id}/`, data),
 };
+
+/**
+ * SERVIÇO DE SCRAPING (vagas externas)
+ */
+const scraperApi = axios.create({
+  baseURL: '/scraper',
+  headers: { 'Content-Type': 'application/json' },
+});
+
+export const scraperService = {
+  listVagas: () => scraperApi.get('/vagas'),
+};

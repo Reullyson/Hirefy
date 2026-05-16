@@ -30,6 +30,8 @@ services:
       - ./scraping:/app      # Permite que você mude o código e ele atualize no container
     networks:
       - hirefy-network
+
+      
   frontend:
     image: node:20-slim
     container_name: hirefy-frontend
