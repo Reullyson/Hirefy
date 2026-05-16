@@ -8,27 +8,27 @@ def limpar_texto(txt):
     return re.sub(r'\s+', ' ', txt).strip()
 
 
-def texto(el, selector=None):
+async def texto(el, selector=None):
     try:
-        t = el.query_selector(selector) if selector else el
+        t = await el.query_selector(selector) if selector else el
 
         if not t:
             return ""
 
-        return t.inner_text().strip()
+        return (await t.inner_text()).strip()
 
     except:
         return ""
 
 
-def attr(el, selector, attribute):
+async def attr(el, selector, attribute):
     try:
-        t = el.query_selector(selector)
+        t = await el.query_selector(selector)
 
         if not t:
             return ""
 
-        return (t.get_attribute(attribute) or "").strip()
+        return (await t.get_attribute(attribute) or "").strip()
 
     except:
         return ""
