@@ -29,6 +29,10 @@ class GoogleLoginView(APIView):
 
         try:
             user = User.objects.get(email=email)
+            
+            if not user.is_active:
+                return Response({'detail': 'Sua conta está desativada. Entre em contato com o administrador.'}, status=status.HTTP_403_FORBIDDEN)
+                
             refresh = RefreshToken.for_user(user)
             
             return Response({

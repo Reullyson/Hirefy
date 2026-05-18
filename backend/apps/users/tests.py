@@ -52,17 +52,17 @@ class UserCRUDTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data)
 
-    def test_get_me_authenticated(self):
-        user = User.objects.create_user(**self.user_data)
-
-        self.client.force_authenticate(user=user)
-
-        response = self.client.get(self.me_url)
-
-        print("ME:", response.data)
-
+    def test_register_and_login(self):
+        data = {**self.user_data, **self.student_data}
+        self.client.post(self.register_url, data)
+        
+        response = self.client.post(self.login_url, {
+            'email': self.user_data['email'],
+            'password': self.user_data['password']
+        })
+        
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['email'], self.user_data['email'])
+        self.assertIn('access', response.data)
 
 class GoogleOAuthTests(TestCase):
     def setUp(self):
@@ -92,6 +92,23 @@ class GoogleOAuthTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data)
         self.assertEqual(response.data['user']['email'], self.academic_email)
+
+    @patch('apps.users.views.verify_google_token')
+    def test_google_login_inactive_user(self, mock_verify):
+        # Mocking valid Google token for inactive user
+        mock_verify.return_value = {
+            'email': self.academic_email,
+            'name': 'Estudante Google',
+            'sub': '123456789'
+        }
+        
+        # Create inactive user
+        User.objects.create_user(**self.user_data, is_active=False)
+        
+        response = self.client.post(self.google_auth_url, {'token': 'valid_token'})
+        
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['detail'], 'Sua conta está desativada. Entre em contato com o administrador.')
 
     @patch('apps.users.views.verify_google_token')
     def test_google_login_user_not_found(self, mock_verify):

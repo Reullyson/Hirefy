@@ -33,6 +33,8 @@ class UserSerializer(serializers.ModelSerializer):
     portfolio_url = serializers.URLField(required=False, allow_null=True)
     skills = serializers.CharField(required=False, allow_null=True)
 
+    is_active = serializers.BooleanField(default=True)
+
     cnpj = serializers.CharField(required=False)
     company_name = serializers.CharField(required=False)
 
