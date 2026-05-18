@@ -18,6 +18,7 @@ import { Layout as CompanyLayout } from "@/pages/empresa/Layout";
 
 // Telas de Aluno
 import { Dashboard as StudentDashboard } from "@/pages/aluno/Dashboard";
+import { Vagas as StudentVagas } from "@/pages/aluno/Vagas";
 import { Layout as StudentLayout } from "@/pages/aluno/Layout";
 
 // Telas de Admin
@@ -119,7 +120,7 @@ function AppContent() {
       <StudentLayout>
         <Switch>
           <Route path="/" component={StudentDashboard} />
-          <Route path="/vagas" component={() => <div className="p-8">Em breve: Vagas para Alunos</div>} />
+          <Route path="/vagas" component={StudentVagas} />
           <Route path="/minhas-vagas" component={() => <div className="p-8">Em breve: Suas Candidaturas</div>} />
           <Route path="/perfil" component={() => <div className="p-8">Em breve: Seu Perfil</div>} />
           <Route component={NotFound} />

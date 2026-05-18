@@ -36,6 +36,7 @@ A forma mais rápida de testar o projeto é utilizando o **Docker Compose**.
    - **Frontend:** [http://localhost:5173](http://localhost:5173)
    - **Backend (API):** [http://localhost:8000/api/](http://localhost:8000/api/)
    - **Django Admin:** [http://localhost:8000/admin/](http://localhost:8000/admin/)
+   - **Scraping Dashboard:** [http://localhost:5000/vagas](http://localhost:5000/vagas)
 
 3. **Credenciais de Administrador (Seed):**
    O sistema já vem com administradores pré-configurados para teste:

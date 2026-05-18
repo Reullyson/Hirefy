@@ -19,6 +19,19 @@ services:
       - hirefy-network
     restart: unless-stopped
 
+  scrapper:
+    build:
+      context: ./scraping    # O Docker vai entrar nesta pasta
+      dockerfile: Dockerfile  # E ler o arquivo que você acabou de criar
+    container_name: hirefy-scrapper
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./scraping:/app      # Permite que você mude o código e ele atualize no container
+    networks:
+      - hirefy-network
+
+      
   frontend:
     image: node:20-slim
     container_name: hirefy-frontend
@@ -28,6 +41,7 @@ services:
     volumes:
       - ./frontend:/app/frontend
     environment:
+  
       - VITE_API_URL=http://backend:8000
     depends_on:
       - backend

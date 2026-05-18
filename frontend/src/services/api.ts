@@ -84,3 +84,15 @@ export const companyService = {
   approve: (id: string | number) => api.patch(`/companies/${id}/aprovar/`),
   reject: (id: string | number) => api.patch(`/companies/${id}/rejeitar/`),
 };
+
+/**
+ * SERVIÇO DE SCRAPING (vagas externas)
+ */
+const scraperApi = axios.create({
+  baseURL: '/scraper',
+  headers: { 'Content-Type': 'application/json' },
+});
+
+export const scraperService = {
+  listVagas: () => scraperApi.get('/vagas'),
+};
