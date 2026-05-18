@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { userService, companyService } from "@/services/api";
+import { userService, companyService, jobService } from "@/services/api";
 import {
   LayoutGrid,
   Users,
@@ -621,23 +621,56 @@ function CompaniesPage({ onOpenCompany }: { onOpenCompany: (company: any) => voi
     },
   });
 
+  const [actioningId, setActioningId] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [animatedId, setAnimatedId] = useState<{
+    id: number | null;
+    type: "approve" | "reject" | null;
+  }>({ id: null, type: null });
+
   const companies = data ?? [];
 
-  const handleApprove = async (id: number) => {
+  const showFeedback = (type: "success" | "error", message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
+  const handleApprove = async (company: any) => {
     try {
-      await companyService.approve(id);
+      setActioningId(company.id);
+      setAnimatedId({ id: company.id, type: "approve" });
+
+      await companyService.approve(company.id);
       await refetch();
+
+      showFeedback("success", `Empresa "${company.name}" aprovada com sucesso.`);
+      setTimeout(() => setAnimatedId({ id: null, type: null }), 1200);
     } catch (err: any) {
-      alert(err?.response?.data?.detail || "Erro ao aprovar empresa.");
+      showFeedback("error", err?.response?.data?.detail || "Erro ao aprovar empresa.");
+      setAnimatedId({ id: null, type: null });
+    } finally {
+      setActioningId(null);
     }
   };
 
-  const handleReject = async (id: number) => {
+  const handleReject = async (company: any) => {
     try {
-      await companyService.reject(id);
+      setActioningId(company.id);
+      setAnimatedId({ id: company.id, type: "reject" });
+
+      await companyService.reject(company.id);
       await refetch();
+
+      showFeedback("success", `Empresa "${company.name}" rejeitada.`);
+      setTimeout(() => setAnimatedId({ id: null, type: null }), 1200);
     } catch (err: any) {
-      alert(err?.response?.data?.detail || "Erro ao rejeitar empresa.");
+      showFeedback("error", err?.response?.data?.detail || "Erro ao rejeitar empresa.");
+      setAnimatedId({ id: null, type: null });
+    } finally {
+      setActioningId(null);
     }
   };
 
@@ -661,15 +694,35 @@ function CompaniesPage({ onOpenCompany }: { onOpenCompany: (company: any) => voi
         Empresas cadastradas no sistema para aprovação ou rejeição.
       </p>
 
+      {feedback && (
+        <div
+          className={`admin-feedback ${
+            feedback.type === "success" ? "admin-feedback-success" : "admin-feedback-error"
+          }`}
+        >
+          {feedback.message}
+        </div>
+      )}
+
       {companies.length === 0 ? (
         <div style={{ padding: "24px", color: "#94a3b8" }}>
           Nenhuma empresa encontrada.
         </div>
       ) : (
         companies.map((company: any) => (
-          <div key={company.id} className="request-card">
+          <div
+            key={company.id}
+            className={`request-card company-action-card ${
+              animatedId.id === company.id
+                ? animatedId.type === "approve"
+                  ? "company-approved"
+                  : "company-rejected"
+                : ""
+            }`}
+          >
             <div className="company-info">
               <strong>{company.name}</strong>
+
               <div className="company-details">
                 <p>CNPJ: {company.cnpj}</p>
                 <p>Status: {company.status}</p>
@@ -687,16 +740,30 @@ function CompaniesPage({ onOpenCompany }: { onOpenCompany: (company: any) => voi
 
               <button
                 className="small-button primary"
-                onClick={() => handleApprove(company.id)}
+                onClick={() => handleApprove(company)}
+                disabled={actioningId === company.id}
               >
-                <CheckCircle2 size={16} /> Aprovar
+                {actioningId === company.id ? (
+                  "Processando..."
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} /> Aprovar
+                  </>
+                )}
               </button>
 
               <button
                 className="small-button secondary"
-                onClick={() => handleReject(company.id)}
+                onClick={() => handleReject(company)}
+                disabled={actioningId === company.id}
               >
-                <XCircle size={16} /> Rejeitar
+                {actioningId === company.id ? (
+                  "Processando..."
+                ) : (
+                  <>
+                    <XCircle size={16} /> Rejeitar
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -753,71 +820,166 @@ function CompanyDetailPage({
 }
 
 function JobsPage() {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-jobs"],
+    queryFn: async () => {
+      const response = await jobService.list();
+      return response.data;
+    },
+  });
+
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const [actioningId, setActioningId] = useState<number | null>(null);
+
+  const jobs = data ?? [];
+
+  const showFeedback = (
+    type: "success" | "error",
+    message: string
+  ) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 3000);
+  };
+
+  const handleApprove = async (job: any) => {
+    try {
+      setActioningId(job.id);
+
+      await jobService.approve(job.id);
+
+      await refetch();
+
+      showFeedback(
+        "success",
+        `Vaga "${job.title}" aprovada com sucesso.`
+      );
+    } catch (error: any) {
+      showFeedback(
+        "error",
+        error?.response?.data?.detail ||
+          "Erro ao aprovar vaga."
+      );
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleReject = async (job: any) => {
+    try {
+      setActioningId(job.id);
+
+      await jobService.reject(job.id);
+
+      await refetch();
+
+      showFeedback(
+        "success",
+        `Vaga "${job.title}" rejeitada.`
+      );
+    } catch (error: any) {
+      showFeedback(
+        "error",
+        error?.response?.data?.detail ||
+          "Erro ao rejeitar vaga."
+      );
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="panel">Carregando vagas...</div>;
+  }
+
+  if (isError) {
+    return <div className="panel">Erro ao carregar vagas.</div>;
+  }
+
   return (
     <div className="panel">
       <h3>Moderação de Vagas</h3>
       <p className="muted">
-        Visualização e controle de todas as vagas publicadas para garantir a integridade do conteúdo.
+        Visualização e controle de todas as vagas publicadas.
       </p>
 
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Vaga</th>
-            <th>Empresa</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
+      {feedback && (
+        <div
+          className={`admin-feedback ${
+            feedback.type === "success"
+              ? "admin-feedback-success"
+              : "admin-feedback-error"
+          }`}
+        >
+          {feedback.message}
+        </div>
+      )}
 
-        <tbody>
-          <tr>
-            <td>Desenvolvedor Frontend React</td>
-            <td>TechNova Ltda</td>
-            <td>
-              <span className="badge success">Publicado</span>
-            </td>
-            <td>
-              <div className="actions">
-                <button className="icon-button">
-                  <Eye size={16} />
-                </button>
-                <button className="icon-button">
-                  <Pencil size={16} />
-                </button>
-                <button className="icon-button-danger">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </td>
-          </tr>
+      {jobs.length === 0 ? (
+        <div style={{ padding: "24px", color: "#94a3b8" }}>
+          Nenhuma vaga encontrada.
+        </div>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Vaga</th>
+              <th>Empresa</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
 
-          <tr>
-            <td>Estágio em UX/UI</td>
-            <td>InovaPrime</td>
-            <td>
-              <span className="badge warning">Em revisão</span>
-            </td>
-            <td>
-              <div className="actions">
-                <button className="icon-button">
-                  <CheckCircle2 size={16} />
-                </button>
-                <button className="icon-button">
-                  <XCircle size={16} />
-                </button>
-                <button className="icon-button-danger">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+          <tbody>
+            {jobs.map((job: any) => (
+              <tr key={job.id}>
+                <td>{job.title}</td>
+                <td>{job.company_name || "-"}</td>
+
+                <td>
+                  <span
+                    className={`badge ${
+                      job.status === "ATIVA"
+                        ? "success"
+                        : job.status === "PAUSADA"
+                        ? "warning"
+                        : "danger"
+                    }`}
+                  >
+                    {job.status}
+                  </span>
+                </td>
+
+                <td>
+                  <div className="actions">
+                    <button
+                      className="icon-button"
+                      onClick={() => handleApprove(job)}
+                      disabled={actioningId === job.id}
+                    >
+                      <CheckCircle2 size={16} />
+                    </button>
+
+                    <button
+                      className="icon-button-danger"
+                      onClick={() => handleReject(job)}
+                      disabled={actioningId === job.id}
+                    >
+                      <XCircle size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
-
 function AdminsPage() {
   return (
     <div className="panel">

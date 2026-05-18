@@ -1,110 +1,179 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 /**
- * Instância base do Axios para chamadas à API
+ * Instância base do Axios
  */
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 /**
- * Interceptor para anexar o Token JWT em todas as requisições
+ * Interceptor para anexar JWT
  */
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('hirefy_access_token');
+  const token = localStorage.getItem("hirefy_access_token");
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 
 /**
- * Interceptor para tratar erros globais (Ex: Token expirado)
+ * Interceptor global de erros
  */
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Lógica de refresh token poderia ser implementada aqui
-      // Por enquanto, apenas limpa o storage se o token for inválido
-      localStorage.removeItem('hirefy_access_token');
+      localStorage.removeItem("hirefy_access_token");
+      localStorage.removeItem("hirefy_refresh_token");
+      window.location.href = "/login";
     }
+
     return Promise.reject(error);
   }
 );
 
-// --- SERVICES ---
+// ======================
+// AUTH
+// ======================
 
-/**
- * SERVIÇO DE AUTENTICAÇÃO
- */
 export const authService = {
-  login: (credentials: any) => api.post('/auth/login/', credentials),
-  googleLogin: (token: string) => api.post('/auth/google/', { token }),
-  refresh: (refresh: string) => api.post('/auth/refresh/', { refresh }),
+  login: (credentials: any) =>
+    api.post("/auth/login/", credentials),
+
+  refresh: (refresh: string) =>
+    api.post("/auth/refresh/", { refresh }),
 };
 
-/**
- * SERVIÇO DE USUÁRIOS / PERFIL
- */
+// ======================
+// USERS
+// ======================
+
 export const userService = {
-  getMe: () => api.get('/users/me/'),
-  getAllUsers: () => api.get('/users/'),
-  getUserById: (id: string | number) => api.get(`/users/${id}/`),
-  updateUser: (id: string | number, data: any) => api.patch(`/users/${id}/`, data),
-  toggleUserActive: (id: string | number) => api.patch(`/users/${id}/toggle-active/`),
-  deleteUser: (id: string | number) => api.delete(`/users/${id}/`),
-  updateMe: (data: any) => api.put('/users/me/', data),
-  deleteMe: () => api.delete('/users/me/'),
-  register: (data: any) => api.post('/users/', data),
+  getMe: () =>
+    api.get("/users/me/"),
+
+  getAllUsers: () =>
+    api.get("/users/"),
+
+  getUserById: (id: string | number) =>
+    api.get(`/users/${id}/`),
+
+  updateUser: (id: string | number, data: any) =>
+    api.patch(`/users/${id}/`, data),
+
+  toggleUserActive: (id: string | number) =>
+    api.patch(`/users/${id}/toggle-active/`),
+
+  deleteUser: (id: string | number) =>
+    api.delete(`/users/${id}/`),
+
+  updateMe: (data: any) =>
+    api.patch("/users/me/", data),
+
+  deleteMe: () =>
+    api.delete("/users/me/"),
+
+  register: (data: any) =>
+    api.post("/users/", data),
 };
-/**
- * SERVIÇO DE VAGAS (JOBS)
- */
+
+// ======================
+// JOBS
+// ======================
+
 export const jobService = {
-  list: () => api.get('/jobs/'),
-  getById: (id: string | number) => api.get(`/jobs/${id}/`),
-  create: (data: any) => api.post('/jobs/', data),
-  update: (id: string | number, data: any) => api.put(`/jobs/${id}/`, data),
-  delete: (id: string | number) => api.delete(`/jobs/${id}/`),
-  importGupy: (url: string) => api.post('/jobs/import_gupy/', { url }),
+  list: () =>
+    api.get("/jobs/"),
+
+  getById: (id: string | number) =>
+    api.get(`/jobs/${id}/`),
+
+  create: (data: any) =>
+    api.post("/jobs/", data),
+
+  update: (id: string | number, data: any) =>
+    api.patch(`/jobs/${id}/`, data),
+
+  delete: (id: string | number) =>
+    api.delete(`/jobs/${id}/`),
+
+  approve: (id: string | number) =>
+    api.patch(`/jobs/${id}/aprovar/`),
+
+  reject: (id: string | number) =>
+    api.patch(`/jobs/${id}/rejeitar/`),
 };
 
-/**
- * SERVIÇO DE CANDIDATURAS
- */
-export const applicationService = {
-  list: (jobId?: string | number) => api.get('/applications/', { params: jobId ? { job: jobId } : {} }),
-  create: (data: any) => api.post('/applications/', data),
-  updateStatus: (id: string | number, status: string) => api.patch(`/applications/${id}/`, { status }),
-};
+// ======================
+// COMPANIES
+// ======================
 
-/**
- * SERVIÇO DE EMPRESAS
- */
 export const companyService = {
-  list: () => api.get('/companies/'),
-  getOwnCompany: () => api.get('/companies/'),
-  create: (data: any) => api.post('/companies/', data),
-  update: (id: string | number, data: any) => api.put(`/companies/${id}/`, data),
-  partialUpdate: (id: string | number, data: any) => api.patch(`/companies/${id}/`, data),
-  approve: (id: string | number) => api.patch(`/companies/${id}/aprovar/`),
-  reject: (id: string | number) => api.patch(`/companies/${id}/rejeitar/`),
+  list: () =>
+    api.get("/companies/"),
+
+  getOwnCompany: () =>
+    api.get("/companies/"),
+
+  getById: (id: string | number) =>
+    api.get(`/companies/${id}/`),
+
+  create: (data: any) =>
+    api.post("/companies/", data),
+
+  update: (id: string | number, data: any) =>
+    api.patch(`/companies/${id}/`, data),
+
+  approve: (id: string | number) =>
+    api.patch(`/companies/${id}/aprovar/`),
+
+  reject: (id: string | number) =>
+    api.patch(`/companies/${id}/rejeitar/`),
 };
 
-/**
- * SERVIÇO DE SCRAPING (vagas externas)
- */
+// ======================
+// APPLICATIONS
+// ======================
+
+export const applicationService = {
+  list: () =>
+    api.get("/applications/"),
+
+  getById: (id: string | number) =>
+    api.get(`/applications/${id}/`),
+
+  create: (data: any) =>
+    api.post("/applications/", data),
+
+  update: (id: string | number, data: any) =>
+    api.patch(`/applications/${id}/`, data),
+
+  delete: (id: string | number) =>
+    api.delete(`/applications/${id}/`),
+};
+
+// ======================
+// SCRAPER
+// ======================
+
 const scraperApi = axios.create({
-  baseURL: '/scraper',
-  headers: { 'Content-Type': 'application/json' },
+  baseURL: "/scraper",
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 export const scraperService = {
-  listVagas: () => scraperApi.get('/vagas'),
+  listVagas: () =>
+    scraperApi.get("/vagas"),
 };
