@@ -1,51 +1,50 @@
-version: '3.8'
-
 services:
   backend:
-    build: 
-      context: .
+    build:
+      context: ./backend
       dockerfile: Dockerfile
+      network: host
     container_name: hirefy-backend
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app/backend
-      - ./db.sqlite3:/app/db.sqlite3
+      - ./backend:/app
+    env_file:
+      - .env
     environment:
-      - DEBUG=True
-      - SECRET_KEY=django-insecure-hirefy-docker-key
-      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - DATABASE_URL=sqlite:///db.sqlite3
     networks:
       - hirefy-network
     restart: unless-stopped
 
   scrapper:
     build:
-      context: ./scraping    # O Docker vai entrar nesta pasta
-      dockerfile: Dockerfile  # E ler o arquivo que você acabou de criar
+      context: ./scraping
+      dockerfile: Dockerfile
     container_name: hirefy-scrapper
     ports:
       - "5000:5000"
     volumes:
-      - ./scraping:/app      # Permite que você mude o código e ele atualize no container
+      - ./scraping:/app
     networks:
       - hirefy-network
 
-      
   frontend:
-    image: node:20-slim
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      network: host
     container_name: hirefy-frontend
-    working_dir: /app/frontend
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app/frontend
-    environment:
-  
-      - VITE_API_URL=http://backend:8000
+      - ./frontend:/app
+      - /app/node_modules
+    env_file:
+      - .env
     depends_on:
       - backend
-    command: npm run dev
     networks:
       - hirefy-network
     restart: unless-stopped

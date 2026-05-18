@@ -3,3 +3,6 @@ djangorestframework
 djangorestframework-simplejwt
 django-cors-headers
 python-dotenv
+google-auth
+django-environ
+requests

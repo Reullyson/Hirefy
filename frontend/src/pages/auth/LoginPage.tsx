@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { FaGoogle, FaEye, FaEyeSlash, FaMapMarkerAlt, FaUserEdit, FaChartLine, FaHandshake, FaPaperPlane } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaMapMarkerAlt, FaUserEdit, FaChartLine, FaHandshake, FaPaperPlane } from 'react-icons/fa';
+import { GoogleLogin } from '@react-oauth/google';
 import Alert from './components/Alert';
 import LoadingOverlay from './components/LoadingOverlay';
 import { authService } from '@/services/api';
@@ -36,13 +37,40 @@ const LoginPage = () => {
             localStorage.setItem('hirefy_refresh_token', refresh);
             
             toast.success('Bem-vindo ao Hirefy!');
-            
-            // Redireciona usando window.location.href para garantir recarregamento total
-            // e evitar problemas de estado/cache no roteamento inicial
             window.location.href = "/";
         } catch (err: any) {
             const errorMsg = err.response?.data?.detail || 'Erro ao realizar login. Verifique suas credenciais.';
             setAlert({ message: errorMsg, type: 'error' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse: any) => {
+        setLoading(true);
+        setAlert(null);
+        
+        try {
+            const response = await authService.googleLogin(credentialResponse.credential);
+            const { access, refresh } = response.data;
+            
+            localStorage.setItem('hirefy_access_token', access);
+            localStorage.setItem('hirefy_refresh_token', refresh);
+            
+            toast.success('Bem-vindo ao Hirefy!');
+            window.location.href = "/";
+        } catch (err: any) {
+            const errorMsg = err.response?.data?.detail || 'Erro ao realizar login com Google.';
+            setAlert({ message: errorMsg, type: 'error' });
+            
+            if (err.response?.status === 404) {
+                // Se não existir, sugere cadastro e passa dados se houver
+                const googleData = err.response.data.google_data;
+                if (googleData) {
+                    sessionStorage.setItem('hirefy_google_data', JSON.stringify(googleData));
+                    setTimeout(() => setLocation('/cadastro'), 3000);
+                }
+            }
         } finally {
             setLoading(false);
         }
@@ -101,7 +129,16 @@ const LoginPage = () => {
                         </div>
 
                         {/* Botão Google */}
-                        <button type="button" onClick={() => setAlert({ message: 'Login com Google em desenvolvimento!', type: 'info' })} style={{ width: '100%', padding: '0.75rem', background: '#F8FAFC', border: '1px solid #e2e8f0', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', cursor: 'pointer', marginBottom: '1rem', color: '#0F172A' }}><FaGoogle /> Entrar com Google</button>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <GoogleLogin 
+                                onSuccess={handleGoogleSuccess}
+                                onError={() => setAlert({ message: 'Falha na autenticação com Google.', type: 'error' })}
+                                useOneTap
+                                theme="outline"
+                                width="100%"
+                                text="continue_with"
+                            />
+                        </div>
 
                     <div style={{ textAlign: 'center', margin: '1rem 0', color: '#94a3b8', fontSize: '0.75rem' }}>ou</div>
 

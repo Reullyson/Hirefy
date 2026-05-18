@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from apps.users.models import Student
 
 
 class Company(models.Model):
@@ -11,7 +12,7 @@ class Company(models.Model):
 
     name = models.CharField(max_length=255)
     cnpj = models.CharField(max_length=20, unique=True)
-    logo_url = models.URLField(max_length=500, null=True, blank=True)
+    logo_url = models.TextField(null=True, blank=True)
     site_url = models.URLField(max_length=500, null=True, blank=True)
 
     recruiter = models.OneToOneField(
@@ -99,4 +100,28 @@ class Job(models.Model):
     class Meta:
         verbose_name = 'Vaga'
         verbose_name_plural = 'Vagas'
+        ordering = ['-created_at']
+
+class Application(models.Model):
+    STATUS_CHOICES = (
+        ('PENDENTE', 'Pendente'),
+        ('EM_ANALISE', 'Em Análise'),
+        ('APROVADO', 'Aprovado'),
+        ('REPROVADO', 'Reprovado'),
+    )
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='applications')
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='applications')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDENTE')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.student.full_name} - {self.job.title}"
+
+    class Meta:
+        verbose_name = 'Candidatura'
+        verbose_name_plural = 'Candidaturas'
+        unique_together = ('student', 'job')
         ordering = ['-created_at']

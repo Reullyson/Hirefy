@@ -6,13 +6,12 @@ import {
   Settings,
   Building2,
   Menu,
-  Loader2,
   LogOut
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { userService } from "@/services/api";
+import { userService, companyService } from "@/services/api";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [locationPath] = useLocation();
@@ -30,6 +29,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
     queryFn: async () => {
       const response = await userService.getMe();
       return response.data;
+    }
+  });
+
+  // Busca dados da empresa para a logo
+  const { data: company } = useQuery({
+    queryKey: ["company"],
+    queryFn: async () => {
+      const response = await companyService.getOwnCompany();
+      return response.data[0] || null;
     }
   });
 
@@ -51,12 +59,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Logo/Header */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-sidebar-primary-foreground" />
+          <div className="w-10 h-10 bg-sidebar-primary rounded-lg flex items-center justify-center overflow-hidden">
+            {company?.logo_url ? (
+              <img 
+                src={company.logo_url} 
+                alt={company.name} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Building2 className="w-6 h-6 text-sidebar-primary-foreground" />
+            )}
           </div>
-          <div>
-            <h1 className="text-sidebar-foreground font-semibold text-lg">Hirefy</h1>
-            <p className="text-sidebar-foreground/70 text-xs">IFCE Campus Cedro</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-sidebar-foreground font-semibold text-lg truncate">
+              {company?.name || "Hirefy"}
+            </h1>
+            <p className="text-sidebar-foreground/70 text-xs truncate">
+              {company?.site_url ? new URL(company.site_url).hostname : "IFCE Campus Cedro"}
+            </p>
           </div>
         </div>
       </div>
@@ -134,11 +154,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <SidebarContent />
           </SheetContent>
         </Sheet>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center shrink-0">
-            <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+            {company?.logo_url ? (
+              <img 
+                src={company.logo_url} 
+                alt={company.name} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
+            )}
           </div>
-          <h1 className="text-sidebar-foreground font-semibold">Hirefy</h1>
+          <h1 className="text-sidebar-foreground font-semibold truncate">
+            {company?.name || "Hirefy"}
+          </h1>
         </div>
       </div>
 

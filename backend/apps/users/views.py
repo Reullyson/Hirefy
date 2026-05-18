@@ -1,11 +1,50 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserSerializer
+from .google_auth import verify_google_token
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+class GoogleLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        token = request.data.get('token')
+        if not token:
+            return Response({'detail': 'Token do Google é obrigatório.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        google_data = verify_google_token(token)
+        if not google_data:
+            return Response({'detail': 'Token do Google inválido ou expirado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = google_data.get('email')
+        
+        # Validar domínio acadêmico
+        if not email.endswith('@aluno.ifce.edu.br'):
+            return Response({'detail': 'Apenas e-mails @aluno.ifce.edu.br são permitidos.'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            user = User.objects.get(email=email)
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': UserSerializer(user).data
+            }, status=status.HTTP_200_OK)
+            
+        except User.DoesNotExist:
+            return Response({
+                'detail': 'Usuário não cadastrado. Por favor, realize o cadastro primeiro.',
+                'google_data': {
+                    'email': email,
+                    'nome': google_data.get('name')
+                }
+            }, status=status.HTTP_404_NOT_FOUND)
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()

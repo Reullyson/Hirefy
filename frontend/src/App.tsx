@@ -20,6 +20,7 @@ import { Layout as CompanyLayout } from "@/pages/empresa/Layout";
 import { Dashboard as StudentDashboard } from "@/pages/aluno/Dashboard";
 import { Vagas as StudentVagas } from "@/pages/aluno/Vagas";
 import { Layout as StudentLayout } from "@/pages/aluno/Layout";
+import { MinhasVagas as StudentMinhasVagasPage } from "@/pages/aluno/MinhasVagas";
 
 // Telas de Admin
 import AdminPanel from "@/pages/admin/AdminPanel";
@@ -121,7 +122,8 @@ function AppContent() {
         <Switch>
           <Route path="/" component={StudentDashboard} />
           <Route path="/vagas" component={StudentVagas} />
-          <Route path="/minhas-vagas" component={() => <div className="p-8">Em breve: Suas Candidaturas</div>} />
+          <Route path="/vagas/:id" component={JobDetails} />
+          <Route path="/minhas-vagas" component={StudentMinhasVagasPage} />
           <Route path="/perfil" component={() => <div className="p-8">Em breve: Seu Perfil</div>} />
           <Route component={NotFound} />
         </Switch>
@@ -166,4 +168,3 @@ function App() {
 }
 
 export default App;
-

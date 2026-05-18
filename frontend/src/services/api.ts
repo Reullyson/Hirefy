@@ -45,6 +45,7 @@ api.interceptors.response.use(
  */
 export const authService = {
   login: (credentials: any) => api.post('/auth/login/', credentials),
+  googleLogin: (token: string) => api.post('/auth/google/', { token }),
   refresh: (refresh: string) => api.post('/auth/refresh/', { refresh }),
 };
 
@@ -71,6 +72,16 @@ export const jobService = {
   create: (data: any) => api.post('/jobs/', data),
   update: (id: string | number, data: any) => api.put(`/jobs/${id}/`, data),
   delete: (id: string | number) => api.delete(`/jobs/${id}/`),
+  importGupy: (url: string) => api.post('/jobs/import_gupy/', { url }),
+};
+
+/**
+ * SERVIÇO DE CANDIDATURAS
+ */
+export const applicationService = {
+  list: (jobId?: string | number) => api.get('/applications/', { params: jobId ? { job: jobId } : {} }),
+  create: (data: any) => api.post('/applications/', data),
+  updateStatus: (id: string | number, status: string) => api.patch(`/applications/${id}/`, { status }),
 };
 
 /**
@@ -81,6 +92,7 @@ export const companyService = {
   getOwnCompany: () => api.get('/companies/'),
   create: (data: any) => api.post('/companies/', data),
   update: (id: string | number, data: any) => api.put(`/companies/${id}/`, data),
+  partialUpdate: (id: string | number, data: any) => api.patch(`/companies/${id}/`, data),
   approve: (id: string | number) => api.patch(`/companies/${id}/aprovar/`),
   reject: (id: string | number) => api.patch(`/companies/${id}/rejeitar/`),
 };
