@@ -21,6 +21,7 @@ import { Dashboard as StudentDashboard } from "@/pages/aluno/Dashboard";
 import { Vagas as StudentVagas } from "@/pages/aluno/Vagas";
 import { Layout as StudentLayout } from "@/pages/aluno/Layout";
 import { MinhasVagas as StudentMinhasVagasPage } from "@/pages/aluno/MinhasVagas";
+import { StudentProfilePage } from "@/pages/aluno/StudentProfilePage";
 
 // Telas de Admin
 import AdminPanel from "@/pages/admin/AdminPanel";
@@ -124,7 +125,7 @@ function AppContent() {
           <Route path="/vagas" component={StudentVagas} />
           <Route path="/vagas/:id" component={JobDetails} />
           <Route path="/minhas-vagas" component={StudentMinhasVagasPage} />
-          <Route path="/perfil" component={() => <div className="p-8">Em breve: Seu Perfil</div>} />
+          <Route path="/perfil" component={StudentProfilePage} />
           <Route component={NotFound} />
         </Switch>
       </StudentLayout>

@@ -31,6 +31,7 @@ class UserSerializer(serializers.ModelSerializer):
     github_url = serializers.URLField(required=False, allow_null=True)
     linkedin_url = serializers.URLField(required=False, allow_null=True)
     portfolio_url = serializers.URLField(required=False, allow_null=True)
+    skills = serializers.CharField(required=False, allow_null=True)
 
     cnpj = serializers.CharField(required=False)
     company_name = serializers.CharField(required=False)
@@ -54,6 +55,7 @@ class UserSerializer(serializers.ModelSerializer):
             'enrollment',
             'city',
             'semester',
+            'skills',
             'github_url',
             'linkedin_url',
             'portfolio_url',
@@ -76,6 +78,7 @@ class UserSerializer(serializers.ModelSerializer):
             ret['enrollment'] = student.enrollment
             ret['city'] = student.city
             ret['semester'] = student.semester
+            ret['skills'] = student.skills
             ret['github_url'] = student.github_url
             ret['linkedin_url'] = student.linkedin_url
             ret['portfolio_url'] = student.portfolio_url
@@ -126,6 +129,7 @@ class UserSerializer(serializers.ModelSerializer):
             'enrollment': validated_data.pop('enrollment', None),
             'city': validated_data.pop('city', None),
             'semester': validated_data.pop('semester', None),
+            'skills': validated_data.pop('skills', None),
             'github_url': validated_data.pop('github_url', None),
             'linkedin_url': validated_data.pop('linkedin_url', None),
             'portfolio_url': validated_data.pop('portfolio_url', None),
@@ -156,12 +160,55 @@ class UserSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
+        experiences_data = validated_data.pop('experiences', None)
+        courses_data = validated_data.pop('courses', None)
 
+        # Campos de perfil de aluno
+        student_fields = ['full_name', 'enrollment', 'city', 'semester', 'skills', 'github_url', 'linkedin_url', 'portfolio_url']
+        student_data = {}
+        for field in student_fields:
+            if field in validated_data:
+                student_data[field] = validated_data.pop(field)
+
+        # Campos de empresa
+        company_fields = {'company_name': 'name', 'cnpj': 'cnpj'}
+        company_data = {}
+        for field, model_field in company_fields.items():
+            if field in validated_data:
+                company_data[model_field] = validated_data.pop(field)
+
+        # Atualizar usuário
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
         if password:
             instance.set_password(password)
-
         instance.save()
+
+        # Atualizar perfil de aluno
+        if hasattr(instance, 'student_profile') and student_data:
+            student = instance.student_profile
+            for attr, value in student_data.items():
+                setattr(student, attr, value)
+            student.save()
+
+            # Atualizar experiências se fornecidas
+            if experiences_data is not None:
+                student.experiences.all().delete()
+                for exp_data in experiences_data:
+                    Experience.objects.create(student=student, **exp_data)
+
+            # Atualizar cursos se fornecidos
+            if courses_data is not None:
+                student.courses.all().delete()
+                for course_data in courses_data:
+                    Course.objects.create(student=student, **course_data)
+
+        # Atualizar empresa
+        if hasattr(instance, 'company') and company_data:
+            company = instance.company
+            for attr, value in company_data.items():
+                setattr(company, attr, value)
+            company.save()
+
         return instance

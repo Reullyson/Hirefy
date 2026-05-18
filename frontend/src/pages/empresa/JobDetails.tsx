@@ -38,7 +38,7 @@ export function JobDetails() {
 
   const isRecruiter = user?.user_type === "RECRUTADOR";
   const isStudent = user?.user_type === "ALUNO";
-  const isProfileIncomplete = isStudent && (!user?.skills || !user?.experiences || user?.experiences.length === 0);
+  // const isProfileIncomplete = isStudent && (!user?.skills || !user?.experiences || user?.experiences.length === 0);
 
   // Busca candidatos (Apenas para Recrutadores)
   const { data: candidates, isLoading: isLoadingCandidates } = useQuery({
@@ -345,7 +345,7 @@ export function JobDetails() {
                 <div className="space-y-4">
                   <button
                     onClick={() => applyMutation.mutate()}
-                    disabled={applyMutation.isLoading || job.user_has_applied || isProfileIncomplete}
+                    disabled={applyMutation.isLoading || job.user_has_applied}
                     className="w-full mt-6 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-70 disabled:bg-muted disabled:text-muted-foreground"
                   >
                     {applyMutation.isLoading ? (
@@ -355,21 +355,10 @@ export function JobDetails() {
                         <CheckCircle2 className="w-4 h-4" />
                         Status: {getStatusLabel(job.user_application_status)}
                       </>
-                    ) : isProfileIncomplete ? (
-                      "Perfil Incompleto"
                     ) : (
                       "Aplicar para esta Vaga"
                     )}
                   </button>
-
-                  {isProfileIncomplete && !job.user_has_applied && (
-                    <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
-                      <p className="text-[11px] text-red-700 leading-tight">
-                        <strong>Ação Necessária:</strong> Adicione suas <strong>competências</strong> e pelo menos uma <strong>experiência</strong> no seu perfil para poder se candidatar.
-                        <Link href="/perfil" className="block mt-1 font-bold underline">Completar Perfil →</Link>
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
