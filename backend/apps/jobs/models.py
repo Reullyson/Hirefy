@@ -1,16 +1,30 @@
 from django.db import models
 from django.conf import settings
 
+
 class Company(models.Model):
+    STATUS_CHOICES = (
+        ('PENDENTE', 'Pendente'),
+        ('APROVADA', 'Aprovada'),
+        ('REJEITADA', 'Rejeitada'),
+    )
+
     name = models.CharField(max_length=255)
     cnpj = models.CharField(max_length=20, unique=True)
     logo_url = models.URLField(max_length=500, null=True, blank=True)
     site_url = models.URLField(max_length=500, null=True, blank=True)
+
     recruiter = models.OneToOneField(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
         related_name='company',
         limit_choices_to={'user_type': 'RECRUTADOR'}
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='PENDENTE'
     )
 
     def __str__(self):
@@ -19,6 +33,7 @@ class Company(models.Model):
     class Meta:
         verbose_name = 'Empresa'
         verbose_name_plural = 'Empresas'
+
 
 class Job(models.Model):
     STATUS_CHOICES = (
@@ -47,27 +62,34 @@ class Job(models.Model):
     )
 
     title = models.CharField(max_length=255)
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='jobs')
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='jobs'
+    )
+
     description = models.TextField()
     requirements_mandatory = models.TextField()
     requirements_desirable = models.TextField(null=True, blank=True)
+
     level = models.CharField(max_length=20, choices=LEVEL_CHOICES)
     education_level = models.CharField(max_length=255)
-    
+
     location_type = models.CharField(max_length=20, choices=LOCATION_TYPES)
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
     country = models.CharField(max_length=100, default='Brasil')
-    
+
     contract_type = models.CharField(max_length=20, choices=CONTRACT_TYPES)
-    workload = models.CharField(max_length=100) # e.g. "40h semanais"
+    workload = models.CharField(max_length=100)
     salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     benefits = models.TextField(null=True, blank=True)
-    
+
     deadline_date = models.DateField(null=True, blank=True)
     gupy_link = models.URLField(max_length=500, null=True, blank=True)
-    
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ATIVA')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

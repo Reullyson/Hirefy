@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { userService } from "@/services/api";
+import { userService, companyService } from "@/services/api";
 import {
   LayoutGrid,
   Users,
@@ -60,7 +60,7 @@ type CompanyDetails = CompanyItem & {
 
 export default function App() {
   const [active, setActive] = useState<ActiveSection>("dashboard");
-  const [selectedCompany, setSelectedCompany] = useState("Alpha Systems");
+  const [selectedCompany, setSelectedCompany] = useState<any>(null);
 
   const handleLogout = () => {
     localStorage.removeItem("hirefy_access_token");
@@ -174,15 +174,15 @@ export default function App() {
           {active === "users" && <UsersPage />}
           {active === "companies" && (
             <CompaniesPage
-              onOpenCompany={(name: string) => {
-                setSelectedCompany(name);
-                setActive("company-detail");
-              }}
+              onOpenCompany={(company: any) => {
+              setSelectedCompany(company);
+              setActive("company-detail");
+            }}
             />
           )}
           {active === "company-detail" && (
             <CompanyDetailPage
-              companyName={selectedCompany}
+              company={selectedCompany}
               onBack={() => setActive("companies")}
             />
           )}
@@ -612,96 +612,121 @@ function UsersPage() {
   );
 }
 
-function CompaniesPage({ onOpenCompany }: { onOpenCompany: (name: string) => void }) {
-  const companies: CompanyItem[] = [
-    {
-      name: "Alpha Systems",
-      cnpj: "12.345.678/0001-90",
-      contato: "rh@alphasystems.com",
-      cidade: "Fortaleza - CE",
+function CompaniesPage({ onOpenCompany }: { onOpenCompany: (company: any) => void }) {
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["admin-companies"],
+    queryFn: async () => {
+      const response = await companyService.list();
+      return response.data;
     },
-    {
-      name: "InovaPrime",
-      cnpj: "98.765.432/0001-10",
-      contato: "people@inovaprime.com",
-      cidade: "Sobral - CE",
-    },
-  ];
+  });
+
+  const companies = data ?? [];
+
+  const handleApprove = async (id: number) => {
+    try {
+      await companyService.approve(id);
+      await refetch();
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || "Erro ao aprovar empresa.");
+    }
+  };
+
+  const handleReject = async (id: number) => {
+    try {
+      await companyService.reject(id);
+      await refetch();
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || "Erro ao rejeitar empresa.");
+    }
+  };
+
+  if (isLoading) {
+    return <div className="panel">Carregando empresas...</div>;
+  }
+
+  if (isError) {
+    const message =
+      (error as any)?.response?.data?.detail ||
+      (error as any)?.response?.data?.message ||
+      "Erro ao carregar empresas.";
+
+    return <div className="panel">{message}</div>;
+  }
 
   return (
     <div className="panel">
       <h3>Homologação de Empresas</h3>
       <p className="muted">
-        Fila de aprovação para novas empresas que desejam publicar vagas na plataforma.
+        Empresas cadastradas no sistema para aprovação ou rejeição.
       </p>
 
-      {companies.map((company) => (
-        <div key={company.name} className="request-card">
-          <div className="company-info">
-            <strong>{company.name}</strong>
-            <div className="company-details">
-              <p>CNPJ: {company.cnpj}</p>
-              <p>Contato: {company.contato}</p>
-              <p>Local: {company.cidade}</p>
+      {companies.length === 0 ? (
+        <div style={{ padding: "24px", color: "#94a3b8" }}>
+          Nenhuma empresa encontrada.
+        </div>
+      ) : (
+        companies.map((company: any) => (
+          <div key={company.id} className="request-card">
+            <div className="company-info">
+              <strong>{company.name}</strong>
+              <div className="company-details">
+                <p>CNPJ: {company.cnpj}</p>
+                <p>Status: {company.status}</p>
+                <p>Recrutador: {company.recruiter_email || "-"}</p>
+              </div>
+            </div>
+
+            <div className="action-row">
+              <button
+                className="small-button primary"
+                onClick={() => onOpenCompany(company)}
+              >
+                <Info size={16} /> Ver dados
+              </button>
+
+              <button
+                className="small-button primary"
+                onClick={() => handleApprove(company.id)}
+              >
+                <CheckCircle2 size={16} /> Aprovar
+              </button>
+
+              <button
+                className="small-button secondary"
+                onClick={() => handleReject(company.id)}
+              >
+                <XCircle size={16} /> Rejeitar
+              </button>
             </div>
           </div>
-
-          <div className="action-row">
-            <button
-              className="small-button primary"
-              onClick={() => onOpenCompany(company.name)}
-            >
-              <Info size={16} /> Ver dados
-            </button>
-            <button className="small-button primary">
-              <CheckCircle2 size={16} /> Aprovar
-            </button>
-            <button className="small-button secondary">
-              <XCircle size={16} /> Rejeitar
-            </button>
-          </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 }
 
 function CompanyDetailPage({
-  companyName,
+  company,
   onBack,
 }: {
-  companyName: string;
+  company: any;
   onBack: () => void;
 }) {
-  const company: CompanyDetails =
-    companyName === "InovaPrime"
-      ? {
-          name: "InovaPrime",
-          cnpj: "98.765.432/0001-10",
-          contato: "people@inovaprime.com",
-          cidade: "Sobral - CE",
-          site: "www.inovaprime.com",
-          descricao:
-            "Empresa focada em inovação, tecnologia e desenvolvimento de soluções digitais.",
-          vagas: ["Estágio em UX/UI", "Analista de Dados Júnior"],
-        }
-      : {
-          name: "Alpha Systems",
-          cnpj: "12.345.678/0001-90",
-          contato: "rh@alphasystems.com",
-          cidade: "Fortaleza - CE",
-          site: "www.alphasystems.com",
-          descricao:
-            "Empresa de tecnologia com atuação em software, serviços e transformação digital.",
-          vagas: ["Desenvolvedor Frontend React", "Estágio em Desenvolvimento Web"],
-        };
+  if (!company) {
+    return (
+      <div className="panel">
+        Nenhuma empresa selecionada.
+      </div>
+    );
+  }
 
   return (
     <div className="panel">
       <div className="detail-header">
         <div>
           <h3>{company.name}</h3>
-          <p className="muted">Tela com os dados da empresa homologada</p>
+          <p className="muted">Dados reais da empresa cadastrada</p>
         </div>
 
         <button className="small-button secondary" onClick={onBack}>
@@ -713,25 +738,14 @@ function CompanyDetailPage({
         <div className="detail-card">
           <strong>Dados cadastrais</strong>
           <p>CNPJ: {company.cnpj}</p>
-          <p>Contato: {company.contato}</p>
-          <p>Local: {company.cidade}</p>
-          <p>Site: {company.site}</p>
+          <p>Contato: {company.recruiter_email || "-"}</p>
+          <p>Site: {company.site_url || "-"}</p>
+          <p>Status: {company.status}</p>
         </div>
 
         <div className="detail-card">
-          <strong>Descrição</strong>
-          <p>{company.descricao}</p>
-        </div>
-
-        <div className="detail-card">
-          <strong>Vagas publicadas</strong>
-          <div className="detail-tags">
-            {company.vagas.map((vaga) => (
-              <span key={vaga} className="detail-tag">
-                {vaga}
-              </span>
-            ))}
-          </div>
+          <strong>Informações adicionais</strong>
+          <p>Logo: {company.logo_url || "Não informado"}</p>
         </div>
       </div>
     </div>

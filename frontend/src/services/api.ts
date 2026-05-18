@@ -77,7 +77,10 @@ export const jobService = {
  * SERVIÇO DE EMPRESAS
  */
 export const companyService = {
+  list: () => api.get('/companies/'),
   getOwnCompany: () => api.get('/companies/'),
   create: (data: any) => api.post('/companies/', data),
   update: (id: string | number, data: any) => api.put(`/companies/${id}/`, data),
+  approve: (id: string | number) => api.patch(`/companies/${id}/aprovar/`),
+  reject: (id: string | number) => api.patch(`/companies/${id}/rejeitar/`),
 };
