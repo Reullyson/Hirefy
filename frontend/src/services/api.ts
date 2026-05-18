@@ -53,11 +53,15 @@ export const authService = {
  */
 export const userService = {
   getMe: () => api.get('/users/me/'),
+  getAllUsers: () => api.get('/users/'),
+  getUserById: (id: string | number) => api.get(`/users/${id}/`),
+  updateUser: (id: string | number, data: any) => api.patch(`/users/${id}/`, data),
+  toggleUserActive: (id: string | number) => api.patch(`/users/${id}/toggle-active/`),
+  deleteUser: (id: string | number) => api.delete(`/users/${id}/`),
   updateMe: (data: any) => api.put('/users/me/', data),
   deleteMe: () => api.delete('/users/me/'),
   register: (data: any) => api.post('/users/', data),
 };
-
 /**
  * SERVIÇO DE VAGAS (JOBS)
  */
