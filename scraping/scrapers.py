@@ -110,3 +110,79 @@ async def geekhunter(page):
         link = "https://www.geekhunter.com.br" + href if href.startswith("/") else href
         vagas.append(build(titulo, empresa, desc, loc, link, "GeekHunter"))
     return vagas
+
+async def scrape_gupy_job(page, url):
+    """
+    Scrapes a single job from a Gupy URL.
+    """
+    await page.goto(url, wait_until="networkidle", timeout=NAV_TIMEOUT)
+    
+    # Try to extract data from structured JSON if available, or fallback to DOM
+    try:
+        # Gupy usually has a __NEXT_DATA__ script
+        data_json = await page.evaluate("() => JSON.parse(document.getElementById('__NEXT_DATA__').textContent)")
+        job_data = data_json['props']['pageProps']['job']
+        
+        # Mapping Gupy levels to our choices
+        level_map = {
+            'Estágio': 'ESTAGIO',
+            'Júnior': 'JUNIOR',
+            'Pleno': 'PLENO',
+            'Sênior': 'SENIOR',
+            'Especialista': 'SENIOR',
+            'Gerência': 'SENIOR',
+            'Diretoria': 'SENIOR'
+        }
+        
+        # Mapping Gupy contract types
+        contract_map = {
+            'CLT': 'CLT',
+            'Pessoa Jurídica': 'PJ',
+            'Estágio': 'ESTAGIO',
+            'Temporário': 'CLT',
+            'Autônomo': 'PJ'
+        }
+
+        # Mapping Location types
+        location_type_map = {
+            'Remoto': 'REMOTO',
+            'Presencial': 'PRESENCIAL',
+            'Híbrido': 'HIBRIDO'
+        }
+
+        res = {
+            'title': job_data.get('name'),
+            'description': job_data.get('description'),
+            'requirements_mandatory': job_data.get('requirements'),
+            'requirements_desirable': "",
+            'benefits': job_data.get('benefits'),
+            'level': level_map.get(job_data.get('careerLevel'), 'JUNIOR'),
+            'contract_type': contract_map.get(job_data.get('type'), 'CLT'),
+            'location_type': location_type_map.get(job_data.get('workplaceType'), 'REMOTO'),
+            'city': job_data.get('city', 'Remoto'),
+            'state': job_data.get('state', 'Remote'),
+            'workload': "Não informado",
+            'education_level': "Não informado"
+        }
+        return res
+    except Exception as e:
+        print(f"Erro ao extrair via JSON: {e}")
+        # Fallback to simple DOM scraping if JSON-LD/NextData fails
+        titulo = await texto(page, "h1")
+        desc = await texto(page, "[data-testid='text-description']")
+        req = await texto(page, "[data-testid='text-requirements']")
+        
+        return {
+            'title': titulo,
+            'description': desc,
+            'requirements_mandatory': req,
+            'requirements_desirable': "",
+            'benefits': "",
+            'level': 'JUNIOR',
+            'contract_type': 'CLT',
+            'location_type': 'REMOTO',
+            'city': 'Vários',
+            'state': 'Vários',
+            'workload': "Não informado",
+            'education_level': "Não informado"
+        }

@@ -66,6 +66,32 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        
+        # Adicionar dados do perfil de aluno se existir
+        if hasattr(instance, 'student_profile'):
+            student = instance.student_profile
+            ret['full_name'] = student.full_name
+            ret['enrollment'] = student.enrollment
+            ret['city'] = student.city
+            ret['semester'] = student.semester
+            ret['github_url'] = student.github_url
+            ret['linkedin_url'] = student.linkedin_url
+            ret['portfolio_url'] = student.portfolio_url
+            
+            # Adicionar experiências e cursos
+            ret['experiences'] = ExperienceSerializer(student.experiences.all(), many=True).data
+            ret['courses'] = CourseSerializer(student.courses.all(), many=True).data
+            
+        # Adicionar dados da empresa se existir
+        if hasattr(instance, 'company'):
+            company = instance.company
+            ret['company_name'] = company.name
+            ret['cnpj'] = company.cnpj
+            
+        return ret
+
     def validate(self, data):
         # Só valida obrigatórios na criação
         if self.instance:
@@ -93,7 +119,40 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        return User.objects.create_user(password=password, **validated_data)
+        
+        # Extrair campos específicos de perfil
+        student_fields = {
+            'full_name': validated_data.pop('full_name', validated_data.get('nome')),
+            'enrollment': validated_data.pop('enrollment', None),
+            'city': validated_data.pop('city', None),
+            'semester': validated_data.pop('semester', None),
+            'github_url': validated_data.pop('github_url', None),
+            'linkedin_url': validated_data.pop('linkedin_url', None),
+            'portfolio_url': validated_data.pop('portfolio_url', None),
+        }
+        
+        company_fields = {
+            'name': validated_data.pop('company_name', None),
+            'cnpj': validated_data.pop('cnpj', None),
+        }
+
+        # Remover experiências e cursos que podem vir no payload mas não são do modelo User
+        validated_data.pop('experiences', None)
+        validated_data.pop('courses', None)
+
+        user_type = validated_data.get('user_type', 'ALUNO')
+        
+        # Criar o usuário
+        user = User.objects.create_user(password=password, **validated_data)
+        
+        # Criar o perfil correspondente
+        if user_type == 'ALUNO':
+            Student.objects.create(user=user, **student_fields)
+        elif user_type == 'RECRUTADOR':
+            Company = apps.get_model('jobs', 'Company')
+            Company.objects.create(recruiter=user, **company_fields)
+            
+        return user
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)

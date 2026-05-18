@@ -98,22 +98,38 @@ class JobViewSet(viewsets.ModelViewSet):
         if 'gupy.io' not in url:
             return Response({'detail': 'URL inválida. Deve ser um link da Gupy.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # TODO: Implementar motor de scraping real na Fase 3.
-        # Por enquanto, retornamos um mock para demonstração do fluxo no frontend.
-        
-        # Simulação de extração de dados (Mock)
-        # Em uma implementação real, usaríamos BeautifulSoup ou Selenium/Playwright
-        mock_data = {
-            'title': 'Desenvolvedor Full Stack (Exemplo Gupy)',
-            'description': 'Esta é uma vaga importada da Gupy. Responsabilidades incluem o desenvolvimento de APIs e interfaces modernas.',
-            'requirements_mandatory': 'Python, Django, React, TypeScript.',
-            'requirements_desirable': 'Experiência com Docker e AWS.',
-            'benefits': 'Vale Refeição, Plano de Saúde, Home Office.',
-            'location_type': 'REMOTO',
-            'level': 'PLENO',
-        }
-        
-        return Response(mock_data)
+        try:
+            # Buscando a empresa do recrutador
+            company = request.user.company
+
+            if company.status != 'APROVADA':
+                return Response({'detail': 'Sua empresa precisa ser homologada antes de publicar vagas.'}, status=status.HTTP_403_FORBIDDEN)
+
+            import requests
+            # Chamada ao serviço de scraper rodando no Docker
+            scraper_url = f"http://scrapper:5000/scrape-gupy?url={url}"
+            response = requests.get(scraper_url, timeout=30)
+            
+            if response.status_code != 200:
+                return Response({'detail': 'Falha ao extrair dados da Gupy. Verifique o link.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            data = response.json()
+            
+            # Adicionando o link original
+            data['gupy_link'] = url
+            
+            # Buscando a empresa do recrutador
+            company = request.user.company
+            
+            # Criando a vaga
+            serializer = JobSerializer(data=data, context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            serializer.save(company=company)
+            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({'detail': f'Erro durante a importação: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ApplicationViewSet(viewsets.ModelViewSet):
     queryset = Application.objects.all()

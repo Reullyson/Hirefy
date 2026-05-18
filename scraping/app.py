@@ -6,9 +6,9 @@ pip install flask playwright && playwright install chromium
 import time
 import asyncio
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from playwright.async_api import async_playwright
-from scrapers import remoteok, gupy, programathor, indeed, vagas_com, geekhunter
+from scrapers import remoteok, gupy, programathor, indeed, vagas_com, geekhunter, scrape_gupy_job
 
 app = Flask(__name__)
 
@@ -72,7 +72,7 @@ def distribuir(vagas, limite):
     return resultado
 
 
-# ── Rota ────────────────────────────────────────────────────────────────────
+# ── Rotas ───────────────────────────────────────────────────────────────────
 
 @app.route("/vagas")
 def api_vagas():
@@ -88,6 +88,28 @@ def api_vagas():
 
     return jsonify(data)
 
+@app.route("/scrape-gupy")
+def api_scrape_gupy():
+    url = request.args.get("url")
+    if not url:
+        return jsonify({"error": "URL is required"}), 400
+    
+    async def _run():
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(user_agent=USER_AGENT, locale="pt-BR")
+            page = await context.new_page()
+            try:
+                return await scrape_gupy_job(page, url)
+            finally:
+                await browser.close()
+    
+    try:
+        data = asyncio.run(_run())
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)

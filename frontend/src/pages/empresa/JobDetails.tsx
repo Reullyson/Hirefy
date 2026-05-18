@@ -38,6 +38,7 @@ export function JobDetails() {
 
   const isRecruiter = user?.user_type === "RECRUTADOR";
   const isStudent = user?.user_type === "ALUNO";
+  const isProfileIncomplete = isStudent && (!user?.skills || !user?.experiences || user?.experiences.length === 0);
 
   // Busca candidatos (Apenas para Recrutadores)
   const { data: candidates, isLoading: isLoadingCandidates } = useQuery({
@@ -274,18 +275,19 @@ export function JobDetails() {
                     candidates.map((app: any) => (
                       <div key={app.id} className="p-4 md:p-6 hover:bg-muted/30 transition-colors">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                          <Link href={`/candidatos/${app.student}`} className="flex items-start gap-4 cursor-pointer group/candidate">
+                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center shrink-0 group-hover/candidate:bg-primary/20 transition-colors">
                               <User className="w-5 h-5 text-primary" />
                             </div>
                             <div>
-                              <h4 className="font-bold text-foreground">{app.student_name}</h4>
+                              <h4 className="font-bold text-foreground group-hover/candidate:text-primary transition-colors">{app.student_name}</h4>
                               <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                                 <Calendar className="w-3.5 h-3.5" />
                                 Inscrito em {format(new Date(app.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                               </p>
+                              <p className="text-[10px] text-primary font-bold mt-1 opacity-0 group-hover/candidate:opacity-100 transition-opacity">VER PERFIL COMPLETO</p>
                             </div>
-                          </div>
+                          </Link>
 
                           <div className="flex flex-wrap items-center gap-3">
                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(app.status)}`}>
@@ -340,22 +342,35 @@ export function JobDetails() {
               )}
 
               {isStudent && (
-                <button
-                  onClick={() => applyMutation.mutate()}
-                  disabled={applyMutation.isLoading || job.user_has_applied}
-                  className="w-full mt-6 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-70 disabled:bg-muted disabled:text-muted-foreground"
-                >
-                  {applyMutation.isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : job.user_has_applied ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      Status: {getStatusLabel(job.user_application_status)}
-                    </>
-                  ) : (
-                    "Aplicar para esta Vaga"
+                <div className="space-y-4">
+                  <button
+                    onClick={() => applyMutation.mutate()}
+                    disabled={applyMutation.isLoading || job.user_has_applied || isProfileIncomplete}
+                    className="w-full mt-6 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-70 disabled:bg-muted disabled:text-muted-foreground"
+                  >
+                    {applyMutation.isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : job.user_has_applied ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        Status: {getStatusLabel(job.user_application_status)}
+                      </>
+                    ) : isProfileIncomplete ? (
+                      "Perfil Incompleto"
+                    ) : (
+                      "Aplicar para esta Vaga"
+                    )}
+                  </button>
+
+                  {isProfileIncomplete && !job.user_has_applied && (
+                    <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
+                      <p className="text-[11px] text-red-700 leading-tight">
+                        <strong>Ação Necessária:</strong> Adicione suas <strong>competências</strong> e pelo menos uma <strong>experiência</strong> no seu perfil para poder se candidatar.
+                        <Link href="/perfil" className="block mt-1 font-bold underline">Completar Perfil →</Link>
+                      </p>
+                    </div>
                   )}
-                </button>
+                </div>
               )}
             </div>
           </div>
