@@ -275,7 +275,7 @@ export function JobDetails() {
                     candidates.map((app: any) => (
                       <div key={app.id} className="p-4 md:p-6 hover:bg-muted/30 transition-colors">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <Link href={`/candidatos/${app.student}`} className="flex items-start gap-4 cursor-pointer group/candidate">
+                          <Link href={`/candidatos/${app.student_user_id}`} className="flex items-start gap-4 cursor-pointer group/candidate">
                             <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center shrink-0 group-hover/candidate:bg-primary/20 transition-colors">
                               <User className="w-5 h-5 text-primary" />
                             </div>

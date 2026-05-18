@@ -1,12 +1,24 @@
 import { Briefcase, Search, GraduationCap, LayoutDashboard, User, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { userService } from "@/services/api";
 import { JobList } from "./components/JobList";
 
 export function Dashboard() {
+  const { data: user } = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => {
+      const response = await userService.getMe();
+      return response.data;
+    }
+  });
+
+  const studentName = user?.full_name || user?.nome || "Estudante";
+
   return (
     <div className="p-6">
       <header className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Olá, Estudante!</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Olá, {studentName}!</h1>
         <p className="text-gray-600">Encontre sua próxima oportunidade de estágio ou emprego.</p>
       </header>
 

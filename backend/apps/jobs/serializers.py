@@ -100,6 +100,7 @@ class JobListSerializer(serializers.ModelSerializer):
 
 class ApplicationSerializer(serializers.ModelSerializer):
     student_name = serializers.ReadOnlyField(source='student.full_name')
+    student_user_id = serializers.ReadOnlyField(source='student.user.id')
     job_title = serializers.ReadOnlyField(source='job.title')
     company_name = serializers.ReadOnlyField(source='job.company.name')
 
