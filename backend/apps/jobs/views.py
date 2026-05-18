@@ -24,7 +24,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         if user.user_type == 'RECRUTADOR':
             return Company.objects.filter(recruiter=user)
 
-        return Company.objects.filter(status='APROVADA')
+        return Company.objects.exclude(status='REJEITADA')
 
     def perform_create(self, serializer):
         serializer.save(
@@ -68,20 +68,11 @@ class JobViewSet(viewsets.ModelViewSet):
         if user.user_type == 'RECRUTADOR':
             return Job.objects.filter(company__recruiter=user)
 
-        return Job.objects.filter(
-            status='ATIVA',
-            company__status='APROVADA'
-        )
+        return Job.objects.filter(status='ATIVA').exclude(company__status='REJEITADA')
 
     def perform_create(self, serializer):
         try:
             company = self.request.user.company
-
-            if company.status != 'APROVADA':
-                raise ValidationError(
-                    "Sua empresa precisa ser homologada antes de publicar vagas."
-                )
-
             serializer.save(company=company)
 
         except Company.DoesNotExist:
@@ -101,9 +92,6 @@ class JobViewSet(viewsets.ModelViewSet):
         try:
             # Buscando a empresa do recrutador
             company = request.user.company
-
-            if company.status != 'APROVADA':
-                return Response({'detail': 'Sua empresa precisa ser homologada antes de publicar vagas.'}, status=status.HTTP_403_FORBIDDEN)
 
             import requests
             # Chamada ao serviço de scraper rodando no Docker
