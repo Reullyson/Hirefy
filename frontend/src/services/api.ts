@@ -35,6 +35,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem("hirefy_access_token");
       localStorage.removeItem("hirefy_refresh_token");
+
       window.location.href = "/login";
     }
 
@@ -78,13 +79,26 @@ export const userService = {
     api.delete(`/users/${id}/`),
 
   updateMe: (data: any) =>
-    api.patch("/users/me/", data),
+    api.put("/users/me/", data),
 
   deleteMe: () =>
     api.delete("/users/me/"),
 
   register: (data: any) =>
     api.post("/users/", data),
+
+  inviteAdmin: (data: {
+    email: string;
+    code: string;
+  }) =>
+    api.post("/users/invite-admin/", data),
+
+  changePassword: (data: {
+    current_password: string;
+    new_password: string;
+    confirm_password: string;
+  }) =>
+    api.post("/users/change-password/", data),
 };
 
 // ======================

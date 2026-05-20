@@ -2,6 +2,7 @@ import os
 import environ
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -11,7 +12,10 @@ env = environ.Env(
     ALLOWED_HOSTS=(list, ['127.0.0.1', 'localhost']),
     CORS_ALLOW_ALL_ORIGINS=(bool, True),
 )
-
+ADMIN_INVITE_CODE = config(
+    "ADMIN_INVITE_CODE",
+    default="HIREFY-ADMIN-2026"
+)
 # Reading .env file
 # Try to read from project root or backend folder
 env_file = os.path.join(BASE_DIR, '.env')

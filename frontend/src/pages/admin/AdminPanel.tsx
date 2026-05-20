@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import { userService, companyService, jobService } from "@/services/api";
 import {
@@ -8,6 +9,7 @@ import {
   Briefcase,
   ShieldCheck,
   Eye,
+  EyeOff,
   Settings,
   CheckCircle2,
   XCircle,
@@ -1087,12 +1089,86 @@ function JobsPage() {
   );
 }
 function AdminsPage() {
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: async () => {
+      const response = await userService.getAllUsers();
+      return response.data;
+    },
+  });
+
+  const users = data ?? [];
+  const admins = users.filter((u: any) => u.user_type === "ADMIN");
+
+  const showFeedback = (type: "success" | "error", message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
+  const handleInvite = async () => {
+    try {
+      setLoading(true);
+
+      const response = await userService.inviteAdmin({
+        email,
+        code,
+      });
+
+      showFeedback(
+        "success",
+        `${response.data.user?.email || email} foi convidado como administrador.`
+      );
+
+      setEmail("");
+      setCode("");
+      await refetch();
+    } catch (error: any) {
+      showFeedback(
+        "error",
+        error?.response?.data?.detail ||
+          error?.response?.data?.email ||
+          error?.response?.data?.code ||
+          "Erro ao enviar convite."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="panel">Carregando administradores...</div>;
+  }
+
+  if (isError) {
+    return <div className="panel">Erro ao carregar administradores.</div>;
+  }
+
   return (
     <div className="panel">
       <h3>Gestão de Administradores</h3>
       <p className="muted">
         Convite para novos membros da coordenação via e-mail com código de validação.
       </p>
+
+      {feedback && (
+        <div
+          className={`admin-feedback ${
+            feedback.type === "success"
+              ? "admin-feedback-success"
+              : "admin-feedback-error"
+          }`}
+        >
+          {feedback.message}
+        </div>
+      )}
 
       <div className="invite-box">
         <div className="input-group">
@@ -1101,52 +1177,379 @@ function AdminsPage() {
             className="input"
             type="email"
             placeholder="novo.admin@ifce.edu.br"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
         </div>
 
         <div className="input-group">
-          <input className="input" type="text" placeholder="Código de validação" />
+          <input
+            className="input"
+            type="text"
+            placeholder="Código de validação"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
         </div>
 
-        <button className="green-button">
+        <button className="green-button" onClick={handleInvite} disabled={loading}>
           <Plus size={16} />
-          Enviar convite
+          {loading ? "Enviando..." : "Enviar convite"}
         </button>
+      </div>
+
+      <div className="subsection">
+        <div className="subsection-title">
+          <ShieldCheck size={16} />
+          <strong>Administradores cadastrados</strong>
+        </div>
+
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Cadastro</th>
+            </tr>
+          </thead>
+          <tbody>
+            {admins.map((admin: any) => (
+              <tr key={admin.id}>
+                <td>{admin.nome}</td>
+                <td>{admin.email}</td>
+                <td>
+                  <span className={admin.is_active ? "badge success" : "badge danger"}>
+                    {admin.is_active ? "Ativo" : "Bloqueado"}
+                  </span>
+                </td>
+                <td>{admin.date_joined ? new Date(admin.date_joined).toLocaleString("pt-BR") : "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {admins.length === 0 && (
+          <div style={{ padding: "24px", color: "#94a3b8" }}>
+            Nenhum administrador encontrado.
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function UserSettingsPage() {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => {
+      const response = await userService.getMe();
+      return response.data;
+    },
+  });
+
+  const [profileForm, setProfileForm] = useState({
+    nome: "",
+    email: "",
+    user_type: "",
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  // VISIBILIDADE DAS SENHAS
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (data) {
+      setProfileForm({
+        nome: data.nome || "",
+        email: data.email || "",
+        user_type: data.user_type || "",
+      });
+    }
+  }, [data]);
+
+  if (isLoading) {
+    return <div className="panel">Carregando configurações...</div>;
+  }
+
+  if (isError || !data) {
+    return <div className="panel">Erro ao carregar configurações.</div>;
+  }
+
+  const handleSaveProfile = async () => {
+    try {
+      await userService.updateMe({
+        nome: profileForm.nome,
+        email: profileForm.email,
+      });
+
+      await refetch();
+
+      alert("Perfil atualizado com sucesso!");
+    } catch (error: any) {
+      alert(
+        error?.response?.data?.detail ||
+          error?.response?.data?.email?.[0] ||
+          "Erro ao atualizar perfil."
+      );
+    }
+  };
+
+  const handleChangePassword = async () => {
+    try {
+      await userService.changePassword(passwordForm);
+
+      setPasswordForm({
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
+
+      alert("Senha alterada com sucesso!");
+    } catch (error: any) {
+      const data = error?.response?.data || {};
+
+      const message =
+        data.detail ||
+        data.current_password?.[0] ||
+        data.new_password?.[0] ||
+        data.confirm_password?.[0] ||
+        "Erro ao alterar senha.";
+
+      alert(message);
+    }
+  };
+
   return (
     <div className="panel">
       <h3>Configurações do Usuário</h3>
-      <p className="muted">Tela de configuração com ícone de engrenagem.</p>
+
+      <p className="muted">
+        Tela de configuração com ícone de engrenagem.
+      </p>
 
       <div className="settings-grid">
+        {/* PERFIL */}
         <div className="detail-card">
           <strong>Perfil</strong>
-          <p>Nome: Empresa Demo</p>
-          <p>E-mail: empresa@demo.com</p>
-          <p>Função: Recrutador</p>
+
+          <p>Nome: {profileForm.nome || "-"}</p>
+
+          <p>E-mail: {profileForm.email || "-"}</p>
+
+          <p>Função: {profileForm.user_type || "-"}</p>
         </div>
 
+        {/* PREFERÊNCIAS */}
         <div className="detail-card">
           <strong>Preferências</strong>
+
           <p>Notificações: Ativas</p>
+
           <p>Idioma: Português</p>
+
           <p>Tema: Claro</p>
         </div>
 
+        {/* AÇÕES */}
         <div className="detail-card">
           <strong>Ações rápidas</strong>
-          <div className="settings-actions">
-            <button className="small-button primary">
-              <UserCog size={16} /> Atualizar perfil
-            </button>
-            <button className="small-button secondary">
-              <BookMarked size={16} /> Alterar senha
-            </button>
+
+          <div
+            style={{
+              display: "grid",
+              gap: "12px",
+              marginTop: "12px",
+            }}
+          >
+            {/* PERFIL */}
+            <div
+              style={{
+                display: "grid",
+                gap: "10px",
+              }}
+            >
+              <input
+                className="input"
+                value={profileForm.nome}
+                onChange={(e) =>
+                  setProfileForm((prev) => ({
+                    ...prev,
+                    nome: e.target.value,
+                  }))
+                }
+                placeholder="Nome"
+              />
+
+              <input
+                className="input"
+                value={profileForm.email}
+                onChange={(e) =>
+                  setProfileForm((prev) => ({
+                    ...prev,
+                    email: e.target.value,
+                  }))
+                }
+                placeholder="E-mail"
+              />
+            </div>
+
+            <div className="settings-actions">
+              <button
+                className="small-button primary"
+                onClick={handleSaveProfile}
+              >
+                <UserCog size={16} />
+                Atualizar perfil
+              </button>
+            </div>
+
+            {/* ALTERAR SENHA */}
+            <div
+              style={{
+                borderTop: "1px solid #334155",
+                paddingTop: "12px",
+              }}
+            >
+              <p
+                style={{
+                  marginBottom: "10px",
+                  fontSize: "13px",
+                  color: "#94a3b8",
+                }}
+              >
+                Alterar senha
+              </p>
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: "10px",
+                }}
+              >
+                {/* SENHA ATUAL */}
+                <div className="password-input-wrapper">
+                  <input
+                    className="input"
+                    type={
+                      showCurrentPassword
+                        ? "text"
+                        : "password"
+                    }
+                    value={passwordForm.current_password}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({
+                        ...prev,
+                        current_password: e.target.value,
+                      }))
+                    }
+                    placeholder="Senha atual"
+                  />
+
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() =>
+                      setShowCurrentPassword(
+                        !showCurrentPassword
+                      )
+                    }
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                </div>
+
+                {/* NOVA SENHA */}
+                <div className="password-input-wrapper">
+                  <input
+                    className="input"
+                    type={
+                      showNewPassword
+                        ? "text"
+                        : "password"
+                    }
+                    value={passwordForm.new_password}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({
+                        ...prev,
+                        new_password: e.target.value,
+                      }))
+                    }
+                    placeholder="Nova senha"
+                  />
+
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() =>
+                      setShowNewPassword(!showNewPassword)
+                    }
+                  >
+                    {showNewPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                </div>
+
+                {/* CONFIRMAR SENHA */}
+                <div className="password-input-wrapper">
+                  <input
+                    className="input"
+                    type={
+                      showConfirmPassword
+                        ? "text"
+                        : "password"
+                    }
+                    value={passwordForm.confirm_password}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({
+                        ...prev,
+                        confirm_password: e.target.value,
+                      }))
+                    }
+                    placeholder="Confirmar nova senha"
+                  />
+
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() =>
+                      setShowConfirmPassword(
+                        !showConfirmPassword
+                      )
+                    }
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                className="small-button secondary"
+                onClick={handleChangePassword}
+                style={{ marginTop: "12px" }}
+              >
+                <BookMarked size={16} />
+                Alterar senha
+              </button>
+            </div>
           </div>
         </div>
       </div>
