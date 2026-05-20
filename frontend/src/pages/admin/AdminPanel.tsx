@@ -215,49 +215,155 @@ function SidebarItem({
 }
 
 function Dashboard() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin-dashboard"],
+    queryFn: async () => {
+      const [usersRes, companiesRes, jobsRes] = await Promise.all([
+        userService.getAllUsers(),
+        companyService.list(),
+        jobService.list(),
+      ]);
+
+      return {
+        users: usersRes.data ?? [],
+        companies: companiesRes.data ?? [],
+        jobs: jobsRes.data ?? [],
+      };
+    },
+  });
+
+  if (isLoading) {
+    return <div className="panel">Carregando dashboard...</div>;
+  }
+
+  if (isError || !data) {
+    return <div className="panel">Erro ao carregar dashboard.</div>;
+  }
+
+  const users = data.users as any[];
+  const companies = data.companies as any[];
+  const jobs = data.jobs as any[];
+
+  const totalUsers = users.length;
+  const totalStudents = users.filter((u) => u.user_type === "ALUNO").length;
+  const totalRecruiters = users.filter((u) => u.user_type === "RECRUTADOR").length;
+  const totalAdmins = users.filter((u) => u.user_type === "ADMIN").length;
+
+  const approvedCompanies = companies.filter((c) => c.status === "APROVADA").length;
+  const pendingCompanies = companies.filter((c) => c.status === "PENDENTE").length;
+  const rejectedCompanies = companies.filter((c) => c.status === "REJEITADA").length;
+
+  const activeJobs = jobs.filter((j) => j.status === "ATIVA").length;
+  const pausedJobs = jobs.filter((j) => j.status === "PAUSADA").length;
+  const closedJobs = jobs.filter((j) => j.status === "ENCERRADA").length;
+
+  const recentUsers = [...users]
+    .sort((a, b) => {
+      const da = new Date(a.date_joined || a.created_at || 0).getTime();
+      const db = new Date(b.date_joined || b.created_at || 0).getTime();
+      return db - da;
+    })
+    .slice(0, 4);
+
+  const recentCompanies = [...companies]
+    .filter((c) => c.status === "PENDENTE" || c.status === "APROVADA")
+    .slice(0, 4);
+
+  const recentJobs = [...jobs]
+    .sort((a, b) => (b.id || 0) - (a.id || 0))
+    .slice(0, 4);
+
   return (
     <>
       <div className="stats-grid">
         <StatCard
           icon={<Users size={18} />}
-          value="1.248"
+          value={String(totalUsers)}
           label="Total de usuários"
-          delta="+12% este mês"
+          delta={`${totalStudents} alunos / ${totalRecruiters} recrutadores`}
         />
         <StatCard
           icon={<Building2 size={18} />}
-          value="84"
-          label="Empresas homologadas"
-          delta="+6 aprovadas"
+          value={String(companies.length)}
+          label="Empresas cadastradas"
+          delta={`${approvedCompanies} aprovadas / ${pendingCompanies} pendentes`}
         />
         <StatCard
           icon={<Briefcase size={18} />}
-          value="156"
-          label="Vagas ativas"
-          delta="+19 novas"
+          value={String(jobs.length)}
+          label="Vagas cadastradas"
+          delta={`${activeJobs} ativas / ${pausedJobs} pausadas`}
+        />
+      </div>
+
+      <div className="stats-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <StatCard
+          icon={<ShieldCheck size={18} />}
+          value={String(totalAdmins)}
+          label="Administradores"
+          delta="Acesso total ao sistema"
+        />
+        <StatCard
+          icon={<CheckCircle2 size={18} />}
+          value={String(approvedCompanies)}
+          label="Empresas homologadas"
+          delta={`${rejectedCompanies} rejeitadas`}
+        />
+        <StatCard
+          icon={<XCircle size={18} />}
+          value={String(closedJobs)}
+          label="Vagas encerradas"
+          delta="Moderação concluída"
         />
       </div>
 
       <div className="panel">
-        <h3>Atividades Recentes</h3>
+        <h3>Atividades recentes</h3>
 
         <div className="activity-list">
-          <ActivityItem
-            title="Nova inscrição para Desenvolvedor Frontend"
-            subtitle="Maria Silva • há 5 minutos"
-          />
-          <ActivityItem
-            title="Empresa homologada: TechNova Ltda"
-            subtitle="Coordenação • há 1 hora"
-          />
-          <ActivityItem
-            title="Vaga moderada e publicada"
-            subtitle="Sistema • há 2 horas"
-          />
-          <ActivityItem
-            title="Novo administrador convidado"
-            subtitle="Admin principal • há 3 horas"
-          />
+          {recentCompanies.length > 0 && (
+            <>
+              {recentCompanies.map((company) => (
+                <ActivityItem
+                  key={`company-${company.id}`}
+                  title={`Empresa ${company.name} - ${company.status}`}
+                  subtitle={`CNPJ: ${company.cnpj}`}
+                />
+              ))}
+            </>
+          )}
+
+          {recentJobs.length > 0 && (
+            <>
+              {recentJobs.map((job) => (
+                <ActivityItem
+                  key={`job-${job.id}`}
+                  title={`Vaga: ${job.title}`}
+                  subtitle={`Empresa: ${job.company_name || "Sem nome"} • Status: ${job.status}`}
+                />
+              ))}
+            </>
+          )}
+
+          {recentUsers.length > 0 && (
+            <>
+              {recentUsers.map((user) => (
+                <ActivityItem
+                  key={`user-${user.id}`}
+                  title={`Usuário cadastrado: ${user.nome}`}
+                  subtitle={`Tipo: ${user.user_type} • Email: ${user.email}`}
+                />
+              ))}
+            </>
+          )}
+
+          {recentUsers.length === 0 &&
+            recentCompanies.length === 0 &&
+            recentJobs.length === 0 && (
+              <div style={{ color: "#94a3b8", padding: "8px 0" }}>
+                Nenhuma atividade recente encontrada.
+              </div>
+            )}
         </div>
       </div>
     </>
