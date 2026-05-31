@@ -133,3 +133,6 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='Hirefy <noreply@hirefy.c
 # Google OAuth2 Settings
 GOOGLE_OAUTH2_CLIENT_ID = env('GOOGLE_OAUTH2_CLIENT_ID', default='')
 
+# Frontend URL for links
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
+

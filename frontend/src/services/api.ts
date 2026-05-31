@@ -63,6 +63,8 @@ export const userService = {
   updateMe: (data: any) => api.put('/users/me/', data),
   deleteMe: () => api.delete('/users/me/'),
   register: (data: any) => api.post('/users/', data),
+  inviteRecruiter: (data: any) => api.post('/users/invite-recruiter/', data),
+  acceptInvite: (data: any) => api.post('/users/accept-invite/', data),
 };
 /**
  * SERVIÇO DE VAGAS (JOBS)
