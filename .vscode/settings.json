@@ -1,0 +1,10 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "hirefy",
+            "database": "${workspaceFolder:Hirefy}/backend/db.sqlite3"
+        }
+    ]
+}

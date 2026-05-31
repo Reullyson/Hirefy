@@ -30,6 +30,7 @@ import AdminPanel from "@/pages/admin/AdminPanel";
 import LoginPage from "@/pages/auth/LoginPage";
 import AdminLoginPage from "@/pages/auth/AdminLoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
+import AcceptInvitePage from "@/pages/auth/AcceptInvitePage";
 
 import NotFound from "@/pages/not-found";
 
@@ -70,6 +71,7 @@ function AppContent() {
         <Route path="/login" component={LoginPage} />
         <Route path="/admin/login" component={AdminLoginPage} />
         <Route path="/cadastro" component={RegisterPage} />
+        <Route path="/aceitar-convite" component={AcceptInvitePage} />
         <Route>
           <Redirect to="/login" />
         </Route>

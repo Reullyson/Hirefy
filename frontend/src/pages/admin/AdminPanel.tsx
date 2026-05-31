@@ -377,6 +377,13 @@ function UsersPage() {
   const [filter, setFilter] = useState("todos");
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    nome: "",
+    email: "",
+    company_name: "",
+    cnpj: "",
+  });
   const [editForm, setEditForm] = useState({
     nome: "",
     email: "",
@@ -424,6 +431,24 @@ function UsersPage() {
   const closeModals = () => {
     setSelectedUser(null);
     setEditingUser(null);
+    setIsInviting(false);
+  };
+
+  const handleInvite = async () => {
+    if (!inviteForm.email || !inviteForm.nome || !inviteForm.company_name || !inviteForm.cnpj) {
+      alert("Por favor, preencha todos os campos do convite.");
+      return;
+    }
+
+    try {
+      await userService.inviteRecruiter(inviteForm);
+      alert("Convite enviado com sucesso!");
+      setInviteForm({ nome: "", email: "", company_name: "", cnpj: "" });
+      setIsInviting(false);
+      await refetch();
+    } catch (error: any) {
+      alert(error?.response?.data?.detail || "Erro ao enviar convite.");
+    }
   };
 
   const handleSave = async () => {
@@ -484,6 +509,14 @@ function UsersPage() {
             Gerencie alunos, recrutadores e administradores da plataforma.
           </p>
         </div>
+        <button 
+          className="small-button primary" 
+          style={{ display: "flex", alignItems: "center", gap: "8px" }}
+          onClick={() => setIsInviting(true)}
+        >
+          <Mail size={16} />
+          Convidar Empresa
+        </button>
       </div>
 
       <div className="invite-box" style={{ marginBottom: "24px" }}>
@@ -711,6 +744,79 @@ function UsersPage() {
               </button>
               <button className="small-button primary" onClick={handleSave}>
                 Salvar alterações
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isInviting && (
+        <div className="modal-backdrop" onClick={closeModals}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="detail-header">
+              <div>
+                <h3>Convidar Empresa</h3>
+                <p className="muted">Envie um convite por e-mail para um novo recrutador</p>
+              </div>
+              <button className="small-button secondary" onClick={closeModals}>
+                Fechar
+              </button>
+            </div>
+
+            <div className="detail-grid">
+              <div className="detail-card">
+                <strong>Dados do Recrutador</strong>
+                <div style={{ display: "grid", gap: "12px", marginTop: "12px" }}>
+                  <input
+                    className="input"
+                    value={inviteForm.nome}
+                    onChange={(e) =>
+                      setInviteForm((prev) => ({ ...prev, nome: e.target.value }))
+                    }
+                    placeholder="Nome do Responsável"
+                  />
+                  <input
+                    className="input"
+                    type="email"
+                    value={inviteForm.email}
+                    onChange={(e) =>
+                      setInviteForm((prev) => ({ ...prev, email: e.target.value }))
+                    }
+                    placeholder="E-mail da Empresa"
+                  />
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <strong>Dados da Empresa</strong>
+                <div style={{ display: "grid", gap: "12px", marginTop: "12px" }}>
+                  <input
+                    className="input"
+                    value={inviteForm.company_name}
+                    onChange={(e) =>
+                      setInviteForm((prev) => ({ ...prev, company_name: e.target.value }))
+                    }
+                    placeholder="Nome Fantasia / Razão Social"
+                  />
+                  <input
+                    className="input"
+                    value={inviteForm.cnpj}
+                    onChange={(e) =>
+                      setInviteForm((prev) => ({ ...prev, cnpj: e.target.value }))
+                    }
+                    placeholder="CNPJ"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="action-row" style={{ marginTop: "16px", justifyContent: "flex-end" }}>
+              <button className="small-button secondary" onClick={closeModals}>
+                Cancelar
+              </button>
+              <button className="small-button primary" onClick={handleInvite}>
+                <Mail size={16} />
+                Enviar Convite
               </button>
             </div>
           </div>

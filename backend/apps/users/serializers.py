@@ -33,6 +33,8 @@ class UserSerializer(serializers.ModelSerializer):
     portfolio_url = serializers.URLField(required=False, allow_null=True)
     skills = serializers.CharField(required=False, allow_null=True)
 
+    is_active = serializers.BooleanField(default=True)
+
     cnpj = serializers.CharField(required=False)
     company_name = serializers.CharField(required=False)
 
@@ -121,7 +123,7 @@ class UserSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
+        password = validated_data.pop('password', None)
         
         # Extrair campos específicos de perfil
         student_fields = {
@@ -147,7 +149,13 @@ class UserSerializer(serializers.ModelSerializer):
         user_type = validated_data.get('user_type', 'ALUNO')
         
         # Criar o usuário
-        user = User.objects.create_user(password=password, **validated_data)
+        if password:
+            user = User.objects.create_user(password=password, **validated_data)
+        else:
+            # Para convites, o usuário é criado sem senha inicialmente
+            user = User.objects.create_user(password=None, **validated_data)
+            user.set_unusable_password()
+            user.save()
         
         # Criar o perfil correspondente
         if user_type == 'ALUNO':
@@ -212,3 +220,27 @@ class UserSerializer(serializers.ModelSerializer):
             company.save()
 
         return instance
+
+
+class InviteRecruiterSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    nome = serializers.CharField(max_length=255)
+    company_name = serializers.CharField(max_length=255)
+    cnpj = serializers.CharField(max_length=18)
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Este email já está cadastrado.")
+        return value
+
+
+class AcceptInviteSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    password = serializers.CharField(validators=[validate_password_strength])
+    confirm_password = serializers.CharField()
+
+    def validate(self, data):
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "As senhas não conferem."})
+        return data

@@ -14,6 +14,9 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
       - DATABASE_URL=sqlite:///db.sqlite3
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     networks:
       - hirefy-network
     restart: unless-stopped
@@ -38,6 +41,9 @@ services:
     container_name: hirefy-frontend
     ports:
       - "5173:5173"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - ./frontend:/app
       - /app/node_modules

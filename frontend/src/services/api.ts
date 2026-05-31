@@ -8,6 +8,7 @@ const API_URL =
  */
 export const api = axios.create({
   baseURL: API_URL,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -50,7 +51,7 @@ api.interceptors.response.use(
 export const authService = {
   login: (credentials: any) =>
     api.post("/auth/login/", credentials),
-
+  googleLogin: (token: string) => api.post('/auth/google/', { token }),
   refresh: (refresh: string) =>
     api.post("/auth/refresh/", { refresh }),
 };
@@ -92,6 +93,12 @@ export const userService = {
     code: string;
   }) =>
     api.post("/users/invite-admin/", data),
+
+  inviteRecruiter: (data: any) => 
+    api.post('/users/invite-recruiter/', data),
+
+  acceptInvite: (data: any) => 
+    api.post('/users/accept-invite/', data),
 
   changePassword: (data: {
     current_password: string;
