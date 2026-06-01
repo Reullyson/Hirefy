@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+import { useQuery } from "@tanstack/react-query";
+import { userService, companyService, jobService } from "@/services/api";
 import {
   LayoutGrid,
   Users,
@@ -6,6 +9,7 @@ import {
   Briefcase,
   ShieldCheck,
   Eye,
+  EyeOff,
   Settings,
   CheckCircle2,
   XCircle,
@@ -19,12 +23,46 @@ import {
   BookMarked,
   Info,
   LogOut,
+  Search,
+  Filter,
+  ShieldX,
 } from "lucide-react";
 import "./AdminPanel.css";
 
+type ActiveSection =
+  | "dashboard"
+  | "users"
+  | "companies"
+  | "company-detail"
+  | "jobs"
+  | "admins"
+  | "settings";
+
+type AdminUser = {
+  id: number;
+  nome?: string;
+  email?: string;
+  user_type?: "ALUNO" | "RECRUTADOR" | "ADMIN";
+  is_active?: boolean;
+  date_joined?: string;
+};
+
+type CompanyItem = {
+  name: string;
+  cnpj: string;
+  contato: string;
+  cidade: string;
+};
+
+type CompanyDetails = CompanyItem & {
+  site: string;
+  descricao: string;
+  vagas: string[];
+};
+
 export default function App() {
-  const [active, setActive] = useState("dashboard");
-  const [selectedCompany, setSelectedCompany] = useState("Alpha Systems");
+  const [active, setActive] = useState<ActiveSection>("dashboard");
+  const [selectedCompany, setSelectedCompany] = useState<any>(null);
 
   const handleLogout = () => {
     localStorage.removeItem("hirefy_access_token");
@@ -88,23 +126,27 @@ export default function App() {
         </nav>
 
         <div className="sidebar-footer">
-          <button className="profile-circle" onClick={() => setActive("settings")} title="Configurações do usuário">
+          <button
+            className="profile-circle"
+            onClick={() => setActive("settings")}
+            title="Configurações do usuário"
+          >
             A
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <strong>Administrador</strong>
             <p>Configurações</p>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              color: 'inherit', 
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              padding: '4px'
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              padding: "4px",
             }}
             title="Sair"
           >
@@ -134,14 +176,17 @@ export default function App() {
           {active === "users" && <UsersPage />}
           {active === "companies" && (
             <CompaniesPage
-              onOpenCompany={(name) => {
-                setSelectedCompany(name);
-                setActive("company-detail");
-              }}
+              onOpenCompany={(company: any) => {
+              setSelectedCompany(company);
+              setActive("company-detail");
+            }}
             />
           )}
           {active === "company-detail" && (
-            <CompanyDetailPage companyName={selectedCompany} onBack={() => setActive("companies")} />
+            <CompanyDetailPage
+              company={selectedCompany}
+              onBack={() => setActive("companies")}
+            />
           )}
           {active === "jobs" && <JobsPage />}
           {active === "admins" && <AdminsPage />}
@@ -152,7 +197,17 @@ export default function App() {
   );
 }
 
-function SidebarItem({ icon, label, active, onClick }) {
+function SidebarItem({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <button className={`sidebar-item ${active ? "active" : ""}`} onClick={onClick}>
       {icon}
@@ -162,22 +217,155 @@ function SidebarItem({ icon, label, active, onClick }) {
 }
 
 function Dashboard() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin-dashboard"],
+    queryFn: async () => {
+      const [usersRes, companiesRes, jobsRes] = await Promise.all([
+        userService.getAllUsers(),
+        companyService.list(),
+        jobService.list(),
+      ]);
+
+      return {
+        users: usersRes.data ?? [],
+        companies: companiesRes.data ?? [],
+        jobs: jobsRes.data ?? [],
+      };
+    },
+  });
+
+  if (isLoading) {
+    return <div className="panel">Carregando dashboard...</div>;
+  }
+
+  if (isError || !data) {
+    return <div className="panel">Erro ao carregar dashboard.</div>;
+  }
+
+  const users = data.users as any[];
+  const companies = data.companies as any[];
+  const jobs = data.jobs as any[];
+
+  const totalUsers = users.length;
+  const totalStudents = users.filter((u) => u.user_type === "ALUNO").length;
+  const totalRecruiters = users.filter((u) => u.user_type === "RECRUTADOR").length;
+  const totalAdmins = users.filter((u) => u.user_type === "ADMIN").length;
+
+  const approvedCompanies = companies.filter((c) => c.status === "APROVADA").length;
+  const pendingCompanies = companies.filter((c) => c.status === "PENDENTE").length;
+  const rejectedCompanies = companies.filter((c) => c.status === "REJEITADA").length;
+
+  const activeJobs = jobs.filter((j) => j.status === "ATIVA").length;
+  const pausedJobs = jobs.filter((j) => j.status === "PAUSADA").length;
+  const closedJobs = jobs.filter((j) => j.status === "ENCERRADA").length;
+
+  const recentUsers = [...users]
+    .sort((a, b) => {
+      const da = new Date(a.date_joined || a.created_at || 0).getTime();
+      const db = new Date(b.date_joined || b.created_at || 0).getTime();
+      return db - da;
+    })
+    .slice(0, 4);
+
+  const recentCompanies = [...companies]
+    .filter((c) => c.status === "PENDENTE" || c.status === "APROVADA")
+    .slice(0, 4);
+
+  const recentJobs = [...jobs]
+    .sort((a, b) => (b.id || 0) - (a.id || 0))
+    .slice(0, 4);
+
   return (
     <>
       <div className="stats-grid">
-        <StatCard icon={<Users size={18} />} value="1.248" label="Total de usuários" delta="+12% este mês" />
-        <StatCard icon={<Building2 size={18} />} value="84" label="Empresas homologadas" delta="+6 aprovadas" />
-        <StatCard icon={<Briefcase size={18} />} value="156" label="Vagas ativas" delta="+19 novas" />
+        <StatCard
+          icon={<Users size={18} />}
+          value={String(totalUsers)}
+          label="Total de usuários"
+          delta={`${totalStudents} alunos / ${totalRecruiters} recrutadores`}
+        />
+        <StatCard
+          icon={<Building2 size={18} />}
+          value={String(companies.length)}
+          label="Empresas cadastradas"
+          delta={`${approvedCompanies} aprovadas / ${pendingCompanies} pendentes`}
+        />
+        <StatCard
+          icon={<Briefcase size={18} />}
+          value={String(jobs.length)}
+          label="Vagas cadastradas"
+          delta={`${activeJobs} ativas / ${pausedJobs} pausadas`}
+        />
+      </div>
+
+      <div className="stats-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <StatCard
+          icon={<ShieldCheck size={18} />}
+          value={String(totalAdmins)}
+          label="Administradores"
+          delta="Acesso total ao sistema"
+        />
+        <StatCard
+          icon={<CheckCircle2 size={18} />}
+          value={String(approvedCompanies)}
+          label="Empresas homologadas"
+          delta={`${rejectedCompanies} rejeitadas`}
+        />
+        <StatCard
+          icon={<XCircle size={18} />}
+          value={String(closedJobs)}
+          label="Vagas encerradas"
+          delta="Moderação concluída"
+        />
       </div>
 
       <div className="panel">
-        <h3>Atividades Recentes</h3>
+        <h3>Atividades recentes</h3>
 
         <div className="activity-list">
-          <ActivityItem title="Nova inscrição para Desenvolvedor Frontend" subtitle="Maria Silva • há 5 minutos" />
-          <ActivityItem title="Empresa homologada: TechNova Ltda" subtitle="Coordenação • há 1 hora" />
-          <ActivityItem title="Vaga moderada e publicada" subtitle="Sistema • há 2 horas" />
-          <ActivityItem title="Novo administrador convidado" subtitle="Admin principal • há 3 horas" />
+          {recentCompanies.length > 0 && (
+            <>
+              {recentCompanies.map((company) => (
+                <ActivityItem
+                  key={`company-${company.id}`}
+                  title={`Empresa ${company.name} - ${company.status}`}
+                  subtitle={`CNPJ: ${company.cnpj}`}
+                />
+              ))}
+            </>
+          )}
+
+          {recentJobs.length > 0 && (
+            <>
+              {recentJobs.map((job) => (
+                <ActivityItem
+                  key={`job-${job.id}`}
+                  title={`Vaga: ${job.title}`}
+                  subtitle={`Empresa: ${job.company_name || "Sem nome"} • Status: ${job.status}`}
+                />
+              ))}
+            </>
+          )}
+
+          {recentUsers.length > 0 && (
+            <>
+              {recentUsers.map((user) => (
+                <ActivityItem
+                  key={`user-${user.id}`}
+                  title={`Usuário cadastrado: ${user.nome}`}
+                  subtitle={`Tipo: ${user.user_type} • Email: ${user.email}`}
+                />
+              ))}
+            </>
+          )}
+
+          {recentUsers.length === 0 &&
+            recentCompanies.length === 0 &&
+            recentJobs.length === 0 && (
+              <div style={{ color: "#94a3b8", padding: "8px 0" }}>
+                Nenhuma atividade recente encontrada.
+              </div>
+            )}
         </div>
       </div>
     </>
@@ -185,198 +373,641 @@ function Dashboard() {
 }
 
 function UsersPage() {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("todos");
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    nome: "",
+    email: "",
+    company_name: "",
+    cnpj: "",
+  });
+  const [editForm, setEditForm] = useState({
+    nome: "",
+    email: "",
+    user_type: "ALUNO",
+  });
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: async () => {
+      const response = await userService.getAllUsers();
+      return response.data;
+    },
+  });
+
+  const users = data ?? [];
+
+  const filteredUsers = users.filter((user: any) => {
+    const nome = (user.nome ?? "").toLowerCase();
+    const email = (user.email ?? "").toLowerCase();
+    const tipo = (user.user_type ?? "").toLowerCase();
+
+    const matchSearch =
+      nome.includes(search.toLowerCase()) ||
+      email.includes(search.toLowerCase()) ||
+      tipo.includes(search.toLowerCase());
+
+    const matchFilter = filter === "todos" || user.user_type === filter;
+
+    return matchSearch && matchFilter;
+  });
+
+  const getBadgeClass = (active: boolean) => {
+    return active ? "badge success" : "badge danger";
+  };
+
+  const openEditModal = (user: any) => {
+    setEditingUser(user);
+    setEditForm({
+      nome: user.nome ?? "",
+      email: user.email ?? "",
+      user_type: user.user_type ?? "ALUNO",
+    });
+  };
+
+  const closeModals = () => {
+    setSelectedUser(null);
+    setEditingUser(null);
+    setIsInviting(false);
+  };
+
+  const handleInvite = async () => {
+    if (!inviteForm.email || !inviteForm.nome || !inviteForm.company_name || !inviteForm.cnpj) {
+      alert("Por favor, preencha todos os campos do convite.");
+      return;
+    }
+
+    try {
+      await userService.inviteRecruiter(inviteForm);
+      alert("Convite enviado com sucesso!");
+      setInviteForm({ nome: "", email: "", company_name: "", cnpj: "" });
+      setIsInviting(false);
+      await refetch();
+    } catch (error: any) {
+      alert(error?.response?.data?.detail || "Erro ao enviar convite.");
+    }
+  };
+
+  const handleSave = async () => {
+  if (!editingUser) return;
+
+  try {
+    await userService.updateUser(editingUser.id, {
+      nome: editForm.nome,
+      email: editForm.email,
+      user_type: editForm.user_type,
+    });
+
+    await refetch();
+    closeModals();
+  } catch (error: any) {
+    alert(error?.response?.data?.detail || "Erro ao atualizar usuário.");
+  }
+};
+
+  const handleToggleActive = async (user: any) => {
+  try {
+    await userService.toggleUserActive(user.id);
+    await refetch();
+  } catch (error: any) {
+    alert(error?.response?.data?.detail || "Erro ao bloquear/desbloquear usuário.");
+  }
+};
+
+  const handleDelete = async (user: any) => {
+    const ok = window.confirm(`Tem certeza que deseja excluir ${user.nome}?`);
+    if (!ok) return;
+
+    try {
+      await userService.deleteUser(user.id);
+      await refetch();
+    } catch (error: any) {
+      alert(
+        error?.response?.data?.detail ||
+        "Erro ao excluir usuário."
+      );
+    }
+  };
+
+  if (isLoading) {
+    return <div className="panel">Carregando usuários...</div>;
+  }
+
+  if (isError) {
+    return <div className="panel">Erro ao carregar usuários.</div>;
+  }
+
   return (
     <div className="panel">
-      <h3>Gerenciamento de Usuários</h3>
-      <p className="muted">
-        Lista global de estudantes e recrutadores com ferramentas de moderação.
-      </p>
+      <div className="detail-header">
+        <div>
+          <h3>Painel de Gestão de Usuários</h3>
+          <p className="muted">
+            Gerencie alunos, recrutadores e administradores da plataforma.
+          </p>
+        </div>
+        <button 
+          className="small-button primary" 
+          style={{ display: "flex", alignItems: "center", gap: "8px" }}
+          onClick={() => setIsInviting(true)}
+        >
+          <Mail size={16} />
+          Convidar Empresa
+        </button>
+      </div>
+
+      <div className="invite-box" style={{ marginBottom: "24px" }}>
+        <div className="input-group">
+          <Search size={16} color="#94a3b8" />
+          <input
+            className="input"
+            type="text"
+            placeholder="Buscar por nome, email ou tipo..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <div className="input-group" style={{ maxWidth: "220px" }}>
+          <Filter size={16} color="#94a3b8" />
+          <select
+            className="input"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="todos">Todos</option>
+            <option value="ALUNO">Alunos</option>
+            <option value="RECRUTADOR">Empresas</option>
+            <option value="ADMIN">Admins</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="stats-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+        <StatCard
+          icon={<Users size={18} />}
+          value={String(users.length)}
+          label="Total de usuários"
+          delta="Na base"
+        />
+        <StatCard
+          icon={<GraduationCap size={18} />}
+          value={String(users.filter((u: any) => u.user_type === "ALUNO").length)}
+          label="Alunos"
+          delta="Cadastros"
+        />
+        <StatCard
+          icon={<Building2 size={18} />}
+          value={String(users.filter((u: any) => u.user_type === "RECRUTADOR").length)}
+          label="Empresas"
+          delta="Cadastros"
+        />
+        <StatCard
+          icon={<ShieldCheck size={18} />}
+          value={String(users.filter((u: any) => u.user_type === "ADMIN").length)}
+          label="Admins"
+          delta="Acesso total"
+        />
+      </div>
 
       <div className="subsection">
         <div className="subsection-title">
           <GraduationCap size={16} />
-          <strong>Alunos</strong>
+          <strong>Usuários cadastrados</strong>
         </div>
+
         <table className="table">
           <thead>
             <tr>
               <th>Nome</th>
-              <th>Curso</th>
+              <th>Email</th>
+              <th>Tipo</th>
               <th>Status</th>
-              <th>Vagas vinculadas</th>
               <th>Ações</th>
             </tr>
           </thead>
+
           <tbody>
-            <tr>
-              <td>Ana Clara Lima</td>
-              <td>ADS</td>
-              <td><span className="badge success">Ativo</span></td>
-              <td>
-                <div className="linked-jobs">
-                  <span>Estágio em Desenvolvimento Web</span>
-                  <span>•</span>
-                  <span>UX/UI Júnior</span>
-                </div>
-              </td>
-              <td>
-                <div className="actions">
-                  <button className="icon-button"><Eye size={16} /></button>
-                  <button className="icon-button"><Pencil size={16} /></button>
-                  <button className="icon-button-danger"><Trash2 size={16} /></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>Carlos Henrique</td>
-              <td>SI</td>
-              <td><span className="badge success">Ativo</span></td>
-              <td>
-                <div className="linked-jobs">
-                  <span>Analista de Dados Júnior</span>
-                </div>
-              </td>
-              <td>
-                <div className="actions">
-                  <button className="icon-button"><Eye size={16} /></button>
-                  <button className="icon-button"><Pencil size={16} /></button>
-                  <button className="icon-button-danger"><Trash2 size={16} /></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>João Pedro</td>
-              <td>Redes</td>
-              <td><span className="badge warning">Pendente</span></td>
-              <td>
-                <div className="linked-jobs muted-inline">
-                  Nenhuma vaga vinculada
-                </div>
-              </td>
-              <td>
-                <div className="actions">
-                  <button className="icon-button"><CheckCircle2 size={16} /></button>
-                  <button className="icon-button"><XCircle size={16} /></button>
-                  <button className="icon-button-danger"><Trash2 size={16} /></button>
-                </div>
-              </td>
-            </tr>
+            {filteredUsers.map((user: any) => (
+              <tr key={user.id}>
+                <td>{user.nome}</td>
+                <td>{user.email}</td>
+                <td>{user.user_type}</td>
+                <td>
+                  <span className={getBadgeClass(!!user.is_active)}>
+                    {user.is_active ? "Ativo" : "Bloqueado"}
+                  </span>
+                </td>
+                <td>
+                  <div className="actions">
+                    <button
+                      className="icon-button"
+                      title="Ver"
+                      onClick={() => setSelectedUser(user)}
+                    >
+                      <Eye size={16} />
+                    </button>
+
+                    <button
+                      className="icon-button"
+                      title="Editar"
+                      onClick={() => openEditModal(user)}
+                    >
+                      <Pencil size={16} />
+                    </button>
+
+                    <button
+                      className="icon-button"
+                      title="Bloquear / Desbloquear"
+                      onClick={() => handleToggleActive(user)}
+                    >
+                      <ShieldX size={16} />
+                    </button>
+
+                    <button
+                      className="icon-button-danger"
+                      title="Excluir"
+                      onClick={() => handleDelete(user)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
+
+        {filteredUsers.length === 0 && (
+          <div style={{ padding: "24px", color: "#94a3b8" }}>
+            Nenhum usuário encontrado.
+          </div>
+        )}
       </div>
 
-      <div className="subsection">
-        <div className="subsection-title">
-          <Users size={16} />
-          <strong>Recrutadores</strong>
+      {selectedUser && (
+        <div className="modal-backdrop" onClick={closeModals}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="detail-header">
+              <div>
+                <h3>Detalhes do Usuário</h3>
+                <p className="muted">Visualização rápida do cadastro</p>
+              </div>
+              <button className="small-button secondary" onClick={closeModals}>
+                Fechar
+              </button>
+            </div>
+
+            <div className="detail-grid">
+              <div className="detail-card">
+                <strong>Dados principais</strong>
+                <p>Nome: {selectedUser.nome}</p>
+                <p>Email: {selectedUser.email}</p>
+                <p>Tipo: {selectedUser.user_type}</p>
+                <p>Status: {selectedUser.is_active ? "Ativo" : "Bloqueado"}</p>
+              </div>
+
+              <div className="detail-card">
+                <strong>Informações técnicas</strong>
+                <p>ID: {selectedUser.id}</p>
+                <p>Cadastro: {selectedUser.date_joined || "-"}</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Empresa</th>
-              <th>Status</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Paula Mendes</td>
-              <td>TechNova Ltda</td>
-              <td><span className="badge success">Ativo</span></td>
-              <td>
-                <div className="actions">
-                  <button className="icon-button"><Eye size={16} /></button>
-                  <button className="icon-button-danger"><Trash2 size={16} /></button>
+      )}
+
+      {editingUser && (
+        <div className="modal-backdrop" onClick={closeModals}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="detail-header">
+              <div>
+                <h3>Editar Usuário</h3>
+                <p className="muted">Atualize os dados do cadastro</p>
+              </div>
+              <button className="small-button secondary" onClick={closeModals}>
+                Fechar
+              </button>
+            </div>
+
+            <div className="detail-grid">
+              <div className="detail-card">
+                <strong>Dados do usuário</strong>
+
+                <div style={{ display: "grid", gap: "12px" }}>
+                  <input
+                    className="input"
+                    value={editForm.nome}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, nome: e.target.value }))
+                    }
+                    placeholder="Nome"
+                  />
+
+                  <input
+                    className="input"
+                    value={editForm.email}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, email: e.target.value }))
+                    }
+                    placeholder="Email"
+                  />
+
+                  <select
+                    className="input"
+                    value={editForm.user_type}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, user_type: e.target.value }))
+                    }
+                  >
+                    <option value="ALUNO">ALUNO</option>
+                    <option value="RECRUTADOR">RECRUTADOR</option>
+                    <option value="ADMIN">ADMIN</option>
+                  </select>
                 </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              </div>
+
+              <div className="detail-card">
+                <strong>Resumo</strong>
+                <p>Nome: {editForm.nome}</p>
+                <p>Email: {editForm.email}</p>
+                <p>Tipo: {editForm.user_type}</p>
+              </div>
+            </div>
+
+            <div className="action-row" style={{ marginTop: "16px", justifyContent: "flex-end" }}>
+              <button className="small-button secondary" onClick={closeModals}>
+                Cancelar
+              </button>
+              <button className="small-button primary" onClick={handleSave}>
+                Salvar alterações
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isInviting && (
+        <div className="modal-backdrop" onClick={closeModals}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="detail-header">
+              <div>
+                <h3>Convidar Empresa</h3>
+                <p className="muted">Envie um convite por e-mail para um novo recrutador</p>
+              </div>
+              <button className="small-button secondary" onClick={closeModals}>
+                Fechar
+              </button>
+            </div>
+
+            <div className="detail-grid">
+              <div className="detail-card">
+                <strong>Dados do Recrutador</strong>
+                <div style={{ display: "grid", gap: "12px", marginTop: "12px" }}>
+                  <input
+                    className="input"
+                    value={inviteForm.nome}
+                    onChange={(e) =>
+                      setInviteForm((prev) => ({ ...prev, nome: e.target.value }))
+                    }
+                    placeholder="Nome do Responsável"
+                  />
+                  <input
+                    className="input"
+                    type="email"
+                    value={inviteForm.email}
+                    onChange={(e) =>
+                      setInviteForm((prev) => ({ ...prev, email: e.target.value }))
+                    }
+                    placeholder="E-mail da Empresa"
+                  />
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <strong>Dados da Empresa</strong>
+                <div style={{ display: "grid", gap: "12px", marginTop: "12px" }}>
+                  <input
+                    className="input"
+                    value={inviteForm.company_name}
+                    onChange={(e) =>
+                      setInviteForm((prev) => ({ ...prev, company_name: e.target.value }))
+                    }
+                    placeholder="Nome Fantasia / Razão Social"
+                  />
+                  <input
+                    className="input"
+                    value={inviteForm.cnpj}
+                    onChange={(e) =>
+                      setInviteForm((prev) => ({ ...prev, cnpj: e.target.value }))
+                    }
+                    placeholder="CNPJ"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="action-row" style={{ marginTop: "16px", justifyContent: "flex-end" }}>
+              <button className="small-button secondary" onClick={closeModals}>
+                Cancelar
+              </button>
+              <button className="small-button primary" onClick={handleInvite}>
+                <Mail size={16} />
+                Enviar Convite
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function CompaniesPage({ onOpenCompany }) {
-  const companies = [
-    {
-      name: "Alpha Systems",
-      cnpj: "12.345.678/0001-90",
-      contato: "rh@alphasystems.com",
-      cidade: "Fortaleza - CE",
+function CompaniesPage({ onOpenCompany }: { onOpenCompany: (company: any) => void }) {
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["admin-companies"],
+    queryFn: async () => {
+      const response = await companyService.list();
+      return response.data;
     },
-    {
-      name: "InovaPrime",
-      cnpj: "98.765.432/0001-10",
-      contato: "people@inovaprime.com",
-      cidade: "Sobral - CE",
-    },
-  ];
+  });
+
+  const [actioningId, setActioningId] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [animatedId, setAnimatedId] = useState<{
+    id: number | null;
+    type: "approve" | "reject" | null;
+  }>({ id: null, type: null });
+
+  const companies = data ?? [];
+
+  const showFeedback = (type: "success" | "error", message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
+  const handleApprove = async (company: any) => {
+    try {
+      setActioningId(company.id);
+      setAnimatedId({ id: company.id, type: "approve" });
+
+      await companyService.approve(company.id);
+      await refetch();
+
+      showFeedback("success", `Empresa "${company.name}" aprovada com sucesso.`);
+      setTimeout(() => setAnimatedId({ id: null, type: null }), 1200);
+    } catch (err: any) {
+      showFeedback("error", err?.response?.data?.detail || "Erro ao aprovar empresa.");
+      setAnimatedId({ id: null, type: null });
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleReject = async (company: any) => {
+    try {
+      setActioningId(company.id);
+      setAnimatedId({ id: company.id, type: "reject" });
+
+      await companyService.reject(company.id);
+      await refetch();
+
+      showFeedback("success", `Empresa "${company.name}" rejeitada.`);
+      setTimeout(() => setAnimatedId({ id: null, type: null }), 1200);
+    } catch (err: any) {
+      showFeedback("error", err?.response?.data?.detail || "Erro ao rejeitar empresa.");
+      setAnimatedId({ id: null, type: null });
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="panel">Carregando empresas...</div>;
+  }
+
+  if (isError) {
+    const message =
+      (error as any)?.response?.data?.detail ||
+      (error as any)?.response?.data?.message ||
+      "Erro ao carregar empresas.";
+
+    return <div className="panel">{message}</div>;
+  }
 
   return (
     <div className="panel">
       <h3>Homologação de Empresas</h3>
       <p className="muted">
-        Fila de aprovação para novas empresas que desejam publicar vagas na plataforma.
+        Empresas cadastradas no sistema para aprovação ou rejeição.
       </p>
 
-      {companies.map((company) => (
-        <div key={company.name} className="request-card">
-          <div className="company-info">
-            <strong>{company.name}</strong>
-            <div className="company-details">
-              <p>CNPJ: {company.cnpj}</p>
-              <p>Contato: {company.contato}</p>
-              <p>Local: {company.cidade}</p>
+      {feedback && (
+        <div
+          className={`admin-feedback ${
+            feedback.type === "success" ? "admin-feedback-success" : "admin-feedback-error"
+          }`}
+        >
+          {feedback.message}
+        </div>
+      )}
+
+      {companies.length === 0 ? (
+        <div style={{ padding: "24px", color: "#94a3b8" }}>
+          Nenhuma empresa encontrada.
+        </div>
+      ) : (
+        companies.map((company: any) => (
+          <div
+            key={company.id}
+            className={`request-card company-action-card ${
+              animatedId.id === company.id
+                ? animatedId.type === "approve"
+                  ? "company-approved"
+                  : "company-rejected"
+                : ""
+            }`}
+          >
+            <div className="company-info">
+              <strong>{company.name}</strong>
+
+              <div className="company-details">
+                <p>CNPJ: {company.cnpj}</p>
+                <p>Status: {company.status}</p>
+                <p>Recrutador: {company.recruiter_email || "-"}</p>
+              </div>
+            </div>
+
+            <div className="action-row">
+              <button
+                className="small-button primary"
+                onClick={() => onOpenCompany(company)}
+              >
+                <Info size={16} /> Ver dados
+              </button>
+
+              <button
+                className="small-button primary"
+                onClick={() => handleApprove(company)}
+                disabled={actioningId === company.id}
+              >
+                {actioningId === company.id ? (
+                  "Processando..."
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} /> Aprovar
+                  </>
+                )}
+              </button>
+
+              <button
+                className="small-button secondary"
+                onClick={() => handleReject(company)}
+                disabled={actioningId === company.id}
+              >
+                {actioningId === company.id ? (
+                  "Processando..."
+                ) : (
+                  <>
+                    <XCircle size={16} /> Rejeitar
+                  </>
+                )}
+              </button>
             </div>
           </div>
-
-          <div className="action-row">
-            <button className="small-button primary" onClick={() => onOpenCompany(company.name)}>
-              <Info size={16} /> Ver dados
-            </button>
-            <button className="small-button primary">
-              <CheckCircle2 size={16} /> Aprovar
-            </button>
-            <button className="small-button secondary">
-              <XCircle size={16} /> Rejeitar
-            </button>
-          </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 }
 
-function CompanyDetailPage({ companyName, onBack }) {
-  const company =
-    companyName === "InovaPrime"
-      ? {
-          name: "InovaPrime",
-          cnpj: "98.765.432/0001-10",
-          contato: "people@inovaprime.com",
-          cidade: "Sobral - CE",
-          site: "www.inovaprime.com",
-          descricao: "Empresa focada em inovação, tecnologia e desenvolvimento de soluções digitais.",
-          vagas: ["Estágio em UX/UI", "Analista de Dados Júnior"],
-        }
-      : {
-          name: "Alpha Systems",
-          cnpj: "12.345.678/0001-90",
-          contato: "rh@alphasystems.com",
-          cidade: "Fortaleza - CE",
-          site: "www.alphasystems.com",
-          descricao: "Empresa de tecnologia com atuação em software, serviços e transformação digital.",
-          vagas: ["Desenvolvedor Frontend React", "Estágio em Desenvolvimento Web"],
-        };
+function CompanyDetailPage({
+  company,
+  onBack,
+}: {
+  company: any;
+  onBack: () => void;
+}) {
+  if (!company) {
+    return (
+      <div className="panel">
+        Nenhuma empresa selecionada.
+      </div>
+    );
+  }
 
   return (
     <div className="panel">
       <div className="detail-header">
         <div>
           <h3>{company.name}</h3>
-          <p className="muted">Tela com os dados da empresa homologada</p>
+          <p className="muted">Dados reais da empresa cadastrada</p>
         </div>
 
         <button className="small-button secondary" onClick={onBack}>
@@ -388,23 +1019,14 @@ function CompanyDetailPage({ companyName, onBack }) {
         <div className="detail-card">
           <strong>Dados cadastrais</strong>
           <p>CNPJ: {company.cnpj}</p>
-          <p>Contato: {company.contato}</p>
-          <p>Local: {company.cidade}</p>
-          <p>Site: {company.site}</p>
+          <p>Contato: {company.recruiter_email || "-"}</p>
+          <p>Site: {company.site_url || "-"}</p>
+          <p>Status: {company.status}</p>
         </div>
 
         <div className="detail-card">
-          <strong>Descrição</strong>
-          <p>{company.descricao}</p>
-        </div>
-
-        <div className="detail-card">
-          <strong>Vagas publicadas</strong>
-          <div className="detail-tags">
-            {company.vagas.map((vaga) => (
-              <span key={vaga} className="detail-tag">{vaga}</span>
-            ))}
-          </div>
+          <strong>Informações adicionais</strong>
+          <p>Logo: {company.logo_url || "Não informado"}</p>
         </div>
       </div>
     </div>
@@ -412,62 +1034,247 @@ function CompanyDetailPage({ companyName, onBack }) {
 }
 
 function JobsPage() {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-jobs"],
+    queryFn: async () => {
+      const response = await jobService.list();
+      return response.data;
+    },
+  });
+
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const [actioningId, setActioningId] = useState<number | null>(null);
+
+  const jobs = data ?? [];
+
+  const showFeedback = (
+    type: "success" | "error",
+    message: string
+  ) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 3000);
+  };
+
+  const handleApprove = async (job: any) => {
+    try {
+      setActioningId(job.id);
+
+      await jobService.approve(job.id);
+
+      await refetch();
+
+      showFeedback(
+        "success",
+        `Vaga "${job.title}" aprovada com sucesso.`
+      );
+    } catch (error: any) {
+      showFeedback(
+        "error",
+        error?.response?.data?.detail ||
+          "Erro ao aprovar vaga."
+      );
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleReject = async (job: any) => {
+    try {
+      setActioningId(job.id);
+
+      await jobService.reject(job.id);
+
+      await refetch();
+
+      showFeedback(
+        "success",
+        `Vaga "${job.title}" rejeitada.`
+      );
+    } catch (error: any) {
+      showFeedback(
+        "error",
+        error?.response?.data?.detail ||
+          "Erro ao rejeitar vaga."
+      );
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="panel">Carregando vagas...</div>;
+  }
+
+  if (isError) {
+    return <div className="panel">Erro ao carregar vagas.</div>;
+  }
+
   return (
     <div className="panel">
       <h3>Moderação de Vagas</h3>
       <p className="muted">
-        Visualização e controle de todas as vagas publicadas para garantir a integridade do conteúdo.
+        Visualização e controle de todas as vagas publicadas.
       </p>
 
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Vaga</th>
-            <th>Empresa</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
+      {feedback && (
+        <div
+          className={`admin-feedback ${
+            feedback.type === "success"
+              ? "admin-feedback-success"
+              : "admin-feedback-error"
+          }`}
+        >
+          {feedback.message}
+        </div>
+      )}
 
-        <tbody>
-          <tr>
-            <td>Desenvolvedor Frontend React</td>
-            <td>TechNova Ltda</td>
-            <td><span className="badge success">Publicado</span></td>
-            <td>
-              <div className="actions">
-                <button className="icon-button"><Eye size={16} /></button>
-                <button className="icon-button"><Pencil size={16} /></button>
-                <button className="icon-button-danger"><Trash2 size={16} /></button>
-              </div>
-            </td>
-          </tr>
+      {jobs.length === 0 ? (
+        <div style={{ padding: "24px", color: "#94a3b8" }}>
+          Nenhuma vaga encontrada.
+        </div>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Vaga</th>
+              <th>Empresa</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
 
-          <tr>
-            <td>Estágio em UX/UI</td>
-            <td>InovaPrime</td>
-            <td><span className="badge warning">Em revisão</span></td>
-            <td>
-              <div className="actions">
-                <button className="icon-button"><CheckCircle2 size={16} /></button>
-                <button className="icon-button"><XCircle size={16} /></button>
-                <button className="icon-button-danger"><Trash2 size={16} /></button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+          <tbody>
+            {jobs.map((job: any) => (
+              <tr key={job.id}>
+                <td>{job.title}</td>
+                <td>{job.company_name || "-"}</td>
+
+                <td>
+                  <span
+                    className={`badge ${
+                      job.status === "ATIVA"
+                        ? "success"
+                        : job.status === "PAUSADA"
+                        ? "warning"
+                        : "danger"
+                    }`}
+                  >
+                    {job.status}
+                  </span>
+                </td>
+
+                <td>
+                  <div className="actions">
+                    <button
+                      className="icon-button"
+                      onClick={() => handleApprove(job)}
+                      disabled={actioningId === job.id}
+                    >
+                      <CheckCircle2 size={16} />
+                    </button>
+
+                    <button
+                      className="icon-button-danger"
+                      onClick={() => handleReject(job)}
+                      disabled={actioningId === job.id}
+                    >
+                      <XCircle size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
-
 function AdminsPage() {
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: async () => {
+      const response = await userService.getAllUsers();
+      return response.data;
+    },
+  });
+
+  const users = data ?? [];
+  const admins = users.filter((u: any) => u.user_type === "ADMIN");
+
+  const showFeedback = (type: "success" | "error", message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
+  const handleInvite = async () => {
+    try {
+      setLoading(true);
+
+      const response = await userService.inviteAdmin({
+        email,
+        code,
+      });
+
+      showFeedback(
+        "success",
+        `${response.data.user?.email || email} foi convidado como administrador.`
+      );
+
+      setEmail("");
+      setCode("");
+      await refetch();
+    } catch (error: any) {
+      showFeedback(
+        "error",
+        error?.response?.data?.detail ||
+          error?.response?.data?.email ||
+          error?.response?.data?.code ||
+          "Erro ao enviar convite."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="panel">Carregando administradores...</div>;
+  }
+
+  if (isError) {
+    return <div className="panel">Erro ao carregar administradores.</div>;
+  }
+
   return (
     <div className="panel">
       <h3>Gestão de Administradores</h3>
       <p className="muted">
         Convite para novos membros da coordenação via e-mail com código de validação.
       </p>
+
+      {feedback && (
+        <div
+          className={`admin-feedback ${
+            feedback.type === "success"
+              ? "admin-feedback-success"
+              : "admin-feedback-error"
+          }`}
+        >
+          {feedback.message}
+        </div>
+      )}
 
       <div className="invite-box">
         <div className="input-group">
@@ -476,6 +1283,8 @@ function AdminsPage() {
             className="input"
             type="email"
             placeholder="novo.admin@ifce.edu.br"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
         </div>
 
@@ -484,48 +1293,369 @@ function AdminsPage() {
             className="input"
             type="text"
             placeholder="Código de validação"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
           />
         </div>
 
-        <button className="green-button">
+        <button className="green-button" onClick={handleInvite} disabled={loading}>
           <Plus size={16} />
-          Enviar convite
+          {loading ? "Enviando..." : "Enviar convite"}
         </button>
+      </div>
+
+      <div className="subsection">
+        <div className="subsection-title">
+          <ShieldCheck size={16} />
+          <strong>Administradores cadastrados</strong>
+        </div>
+
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Cadastro</th>
+            </tr>
+          </thead>
+          <tbody>
+            {admins.map((admin: any) => (
+              <tr key={admin.id}>
+                <td>{admin.nome}</td>
+                <td>{admin.email}</td>
+                <td>
+                  <span className={admin.is_active ? "badge success" : "badge danger"}>
+                    {admin.is_active ? "Ativo" : "Bloqueado"}
+                  </span>
+                </td>
+                <td>{admin.date_joined ? new Date(admin.date_joined).toLocaleString("pt-BR") : "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {admins.length === 0 && (
+          <div style={{ padding: "24px", color: "#94a3b8" }}>
+            Nenhum administrador encontrado.
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function UserSettingsPage() {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => {
+      const response = await userService.getMe();
+      return response.data;
+    },
+  });
+
+  const [profileForm, setProfileForm] = useState({
+    nome: "",
+    email: "",
+    user_type: "",
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  // VISIBILIDADE DAS SENHAS
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (data) {
+      setProfileForm({
+        nome: data.nome || "",
+        email: data.email || "",
+        user_type: data.user_type || "",
+      });
+    }
+  }, [data]);
+
+  if (isLoading) {
+    return <div className="panel">Carregando configurações...</div>;
+  }
+
+  if (isError || !data) {
+    return <div className="panel">Erro ao carregar configurações.</div>;
+  }
+
+  const handleSaveProfile = async () => {
+    try {
+      await userService.updateMe({
+        nome: profileForm.nome,
+        email: profileForm.email,
+      });
+
+      await refetch();
+
+      alert("Perfil atualizado com sucesso!");
+    } catch (error: any) {
+      alert(
+        error?.response?.data?.detail ||
+          error?.response?.data?.email?.[0] ||
+          "Erro ao atualizar perfil."
+      );
+    }
+  };
+
+  const handleChangePassword = async () => {
+    try {
+      await userService.changePassword(passwordForm);
+
+      setPasswordForm({
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
+
+      alert("Senha alterada com sucesso!");
+    } catch (error: any) {
+      const data = error?.response?.data || {};
+
+      const message =
+        data.detail ||
+        data.current_password?.[0] ||
+        data.new_password?.[0] ||
+        data.confirm_password?.[0] ||
+        "Erro ao alterar senha.";
+
+      alert(message);
+    }
+  };
+
   return (
     <div className="panel">
       <h3>Configurações do Usuário</h3>
-      <p className="muted">Tela de configuração com ícone de engrenagem.</p>
+
+      <p className="muted">
+        Tela de configuração com ícone de engrenagem.
+      </p>
 
       <div className="settings-grid">
+        {/* PERFIL */}
         <div className="detail-card">
           <strong>Perfil</strong>
-          <p>Nome: Empresa Demo</p>
-          <p>E-mail: empresa@demo.com</p>
-          <p>Função: Recrutador</p>
+
+          <p>Nome: {profileForm.nome || "-"}</p>
+
+          <p>E-mail: {profileForm.email || "-"}</p>
+
+          <p>Função: {profileForm.user_type || "-"}</p>
         </div>
 
+        {/* PREFERÊNCIAS */}
         <div className="detail-card">
           <strong>Preferências</strong>
+
           <p>Notificações: Ativas</p>
+
           <p>Idioma: Português</p>
+
           <p>Tema: Claro</p>
         </div>
 
+        {/* AÇÕES */}
         <div className="detail-card">
           <strong>Ações rápidas</strong>
-          <div className="settings-actions">
-            <button className="small-button primary">
-              <UserCog size={16} /> Atualizar perfil
-            </button>
-            <button className="small-button secondary">
-              <BookMarked size={16} /> Alterar senha
-            </button>
+
+          <div
+            style={{
+              display: "grid",
+              gap: "12px",
+              marginTop: "12px",
+            }}
+          >
+            {/* PERFIL */}
+            <div
+              style={{
+                display: "grid",
+                gap: "10px",
+              }}
+            >
+              <input
+                className="input"
+                value={profileForm.nome}
+                onChange={(e) =>
+                  setProfileForm((prev) => ({
+                    ...prev,
+                    nome: e.target.value,
+                  }))
+                }
+                placeholder="Nome"
+              />
+
+              <input
+                className="input"
+                value={profileForm.email}
+                onChange={(e) =>
+                  setProfileForm((prev) => ({
+                    ...prev,
+                    email: e.target.value,
+                  }))
+                }
+                placeholder="E-mail"
+              />
+            </div>
+
+            <div className="settings-actions">
+              <button
+                className="small-button primary"
+                onClick={handleSaveProfile}
+              >
+                <UserCog size={16} />
+                Atualizar perfil
+              </button>
+            </div>
+
+            {/* ALTERAR SENHA */}
+            <div
+              style={{
+                borderTop: "1px solid #334155",
+                paddingTop: "12px",
+              }}
+            >
+              <p
+                style={{
+                  marginBottom: "10px",
+                  fontSize: "13px",
+                  color: "#94a3b8",
+                }}
+              >
+                Alterar senha
+              </p>
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: "10px",
+                }}
+              >
+                {/* SENHA ATUAL */}
+                <div className="password-input-wrapper">
+                  <input
+                    className="input"
+                    type={
+                      showCurrentPassword
+                        ? "text"
+                        : "password"
+                    }
+                    value={passwordForm.current_password}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({
+                        ...prev,
+                        current_password: e.target.value,
+                      }))
+                    }
+                    placeholder="Senha atual"
+                  />
+
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() =>
+                      setShowCurrentPassword(
+                        !showCurrentPassword
+                      )
+                    }
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                </div>
+
+                {/* NOVA SENHA */}
+                <div className="password-input-wrapper">
+                  <input
+                    className="input"
+                    type={
+                      showNewPassword
+                        ? "text"
+                        : "password"
+                    }
+                    value={passwordForm.new_password}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({
+                        ...prev,
+                        new_password: e.target.value,
+                      }))
+                    }
+                    placeholder="Nova senha"
+                  />
+
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() =>
+                      setShowNewPassword(!showNewPassword)
+                    }
+                  >
+                    {showNewPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                </div>
+
+                {/* CONFIRMAR SENHA */}
+                <div className="password-input-wrapper">
+                  <input
+                    className="input"
+                    type={
+                      showConfirmPassword
+                        ? "text"
+                        : "password"
+                    }
+                    value={passwordForm.confirm_password}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({
+                        ...prev,
+                        confirm_password: e.target.value,
+                      }))
+                    }
+                    placeholder="Confirmar nova senha"
+                  />
+
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() =>
+                      setShowConfirmPassword(
+                        !showConfirmPassword
+                      )
+                    }
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                className="small-button secondary"
+                onClick={handleChangePassword}
+                style={{ marginTop: "12px" }}
+              >
+                <BookMarked size={16} />
+                Alterar senha
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -533,7 +1663,17 @@ function UserSettingsPage() {
   );
 }
 
-function StatCard({ icon, value, label, delta }) {
+function StatCard({
+  icon,
+  value,
+  label,
+  delta,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  label: string;
+  delta: string;
+}) {
   return (
     <div className="stat-card">
       <div className="stat-icon">{icon}</div>
@@ -544,7 +1684,7 @@ function StatCard({ icon, value, label, delta }) {
   );
 }
 
-function ActivityItem({ title, subtitle }) {
+function ActivityItem({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="activity-item">
       <span className="dot" />

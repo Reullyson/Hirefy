@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
 import { FaEye, FaEyeSlash, FaRocket, FaUserGraduate, FaBuilding, FaShieldAlt } from 'react-icons/fa';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 import Alert from './components/Alert';
 import LoadingOverlay from './components/LoadingOverlay';
 import { userService } from '@/services/api';
@@ -23,6 +25,41 @@ const RegisterPage = () => {
     const [showConfirmSenha, setShowConfirmSenha] = useState(false);
     const [alert, setAlert] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
     const [loading, setLoading] = useState(false);
+    const [isGoogleVerified, setIsGoogleVerified] = useState(false);
+
+    useEffect(() => {
+        // Verificar se há dados do Google vindos do Login
+        const storedGoogleData = sessionStorage.getItem('hirefy_google_data');
+        if (storedGoogleData) {
+            const data = JSON.parse(storedGoogleData);
+            setNome(data.nome);
+            setEmail(data.email);
+            setIsGoogleVerified(true);
+            setTipo('aluno');
+            sessionStorage.removeItem('hirefy_google_data');
+            setAlert({ message: 'Dados do Google importados. Complete seu cadastro abaixo.', type: 'info' });
+        }
+    }, []);
+
+    const handleGoogleSuccess = (credentialResponse: any) => {
+        try {
+            const decoded: any = jwtDecode(credentialResponse.credential);
+            const googleEmail = decoded.email;
+            const googleName = decoded.name;
+
+            if (tipo === 'aluno' && !googleEmail.endsWith('@aluno.ifce.edu.br')) {
+                setAlert({ message: 'Apenas e-mails @aluno.ifce.edu.br são permitidos para estudantes.', type: 'error' });
+                return;
+            }
+
+            setNome(googleName);
+            setEmail(googleEmail);
+            setIsGoogleVerified(true);
+            setAlert({ message: `Olá ${googleName.split(' ')[0]}! Nome e E-mail foram preenchidos. Agora informe sua matrícula e senha.`, type: 'success' });
+        } catch (err) {
+            setAlert({ message: 'Erro ao processar dados do Google.', type: 'error' });
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,7 +115,7 @@ const RegisterPage = () => {
             setAlert({ message: 'Conta criada com sucesso! Redirecionando...', type: 'success' });
             setTimeout(() => setLocation('/login'), 2000);
         } catch (err: any) {
-            const errorMsg = err.response?.data?.detail || err.message || 'Erro ao criar conta.';
+            const errorMsg = err.response?.data?.detail || JSON.stringify(err.response?.data) || err.message || 'Erro ao criar conta.';
             setAlert({ message: errorMsg, type: 'error' });
         } finally {
             setLoading(false);
@@ -150,6 +187,20 @@ const RegisterPage = () => {
 
                     {alert && <Alert message={alert.message} type={alert.type} onClose={() => setAlert(null)} />}
 
+                    {/* Botão Google para preenchimento */}
+                    {tipo === 'aluno' && !isGoogleVerified && (
+                        <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem' }}>
+                            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.75rem', textAlign: 'center' }}>Facilite seu cadastro com Google:</p>
+                            <GoogleLogin 
+                                onSuccess={handleGoogleSuccess}
+                                onError={() => setAlert({ message: 'Falha ao obter dados do Google.', type: 'error' })}
+                                theme="outline"
+                                width="100%"
+                                text="continue_with"
+                            />
+                        </div>
+                    )}
+
                     {/* Tipo de conta */}
                     <div style={{ 
                         background: '#f1f5f9', 
@@ -162,12 +213,12 @@ const RegisterPage = () => {
                             Tipo de conta
                         </label>
                         <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 500, color: '#334155' }}>
-                                <input type="radio" value="aluno" checked={tipo === 'aluno'} onChange={() => setTipo('aluno')} style={{ accentColor: '#059669' }} /> 
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: isGoogleVerified ? 'not-allowed' : 'pointer', fontWeight: 500, color: '#334155', opacity: isGoogleVerified && tipo !== 'aluno' ? 0.5 : 1 }}>
+                                <input type="radio" value="aluno" checked={tipo === 'aluno'} onChange={() => !isGoogleVerified && setTipo('aluno')} disabled={isGoogleVerified} style={{ accentColor: '#059669' }} /> 
                                 Aluno (Estudante)
                             </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 500, color: '#334155' }}>
-                                <input type="radio" value="empresa" checked={tipo === 'empresa'} onChange={() => setTipo('empresa')} style={{ accentColor: '#059669' }} /> 
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: isGoogleVerified ? 'not-allowed' : 'pointer', fontWeight: 500, color: '#334155', opacity: isGoogleVerified && tipo !== 'empresa' ? 0.5 : 1 }}>
+                                <input type="radio" value="empresa" checked={tipo === 'empresa'} onChange={() => !isGoogleVerified && setTipo('empresa')} disabled={isGoogleVerified} style={{ accentColor: '#059669' }} /> 
                                 Empresa (Recrutador)
                             </label>
                         </div>
@@ -183,16 +234,17 @@ const RegisterPage = () => {
                                 value={nome} 
                                 onChange={(e) => setNome(e.target.value)} 
                                 placeholder="Seu nome completo" 
+                                readOnly={isGoogleVerified}
                                 style={{ 
                                     width: '100%', 
                                     padding: '12px 15px', 
                                     border: '1.5px solid #e2e8f0', 
                                     borderRadius: '18px', 
                                     fontSize: '0.95rem', 
-                                    background: '#F8FAFC',
+                                    background: isGoogleVerified ? '#f1f5f9' : '#F8FAFC',
                                     transition: 'all 0.2s',
                                     outline: 'none',
-                                    color: '#0F172A'
+                                    color: isGoogleVerified ? '#64748b' : '#0F172A'
                                 }}
                                 required 
                             />
@@ -207,16 +259,17 @@ const RegisterPage = () => {
                                 value={email} 
                                 onChange={(e) => setEmail(e.target.value)} 
                                 placeholder={tipo === 'aluno' ? 'seu.email@aluno.ifce.edu.br' : 'contato@empresa.com'} 
+                                readOnly={isGoogleVerified}
                                 style={{ 
                                     width: '100%', 
                                     padding: '12px 15px', 
                                     border: '1.5px solid #e2e8f0', 
                                     borderRadius: '18px', 
                                     fontSize: '0.95rem', 
-                                    background: '#F8FAFC',
+                                    background: isGoogleVerified ? '#f1f5f9' : '#F8FAFC',
                                     transition: 'all 0.2s',
                                     outline: 'none',
-                                    color: '#0F172A'
+                                    color: isGoogleVerified ? '#64748b' : '#0F172A'
                                 }}
                                 required 
                             />
@@ -417,6 +470,16 @@ const RegisterPage = () => {
                                 </button>
                             </div>
                         </div>
+
+                        {isGoogleVerified && (
+                             <button 
+                             type="button" 
+                             onClick={() => { setIsGoogleVerified(false); setNome(''); setEmail(''); }}
+                             style={{ background: 'none', border: 'none', color: '#059669', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', marginBottom: '1rem', padding: 0 }}
+                             >
+                                 Alterar e-mail/nome (sair do modo Google)
+                             </button>
+                        )}
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '1rem 0 1.5rem' }}>
                             <input 

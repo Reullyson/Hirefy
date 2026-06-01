@@ -1,8 +1,13 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
-from .models import Company, Job
-from .serializers import CompanySerializer, JobSerializer, JobListSerializer
-from .permissions import IsRecruiterOrAdmin, IsOwnerRecruiterOrAdmin
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError, PermissionDenied
+
+from .models import Company, Job, Application
+from apps.users.models import Student
+from .serializers import CompanySerializer, JobSerializer, JobListSerializer, ApplicationSerializer
+from .permissions import IsRecruiterOrAdmin, IsOwnerRecruiterOrAdmin, IsAdminUserType
+
 
 class CompanyViewSet(viewsets.ModelViewSet):
     queryset = Company.objects.all()
@@ -13,10 +18,30 @@ class CompanyViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.user_type == 'ADMIN':
             return Company.objects.all()
-        return Company.objects.filter(recruiter=user)
+        if user.user_type == 'RECRUTADOR':
+            return Company.objects.filter(recruiter=user)
+        return Company.objects.filter(status='APROVADA')
 
     def perform_create(self, serializer):
-        serializer.save(recruiter=self.request.user)
+        serializer.save(
+            recruiter=self.request.user,
+            status='PENDENTE'
+        )
+
+    @action(detail=True, methods=['patch'], permission_classes=[IsAdminUserType])
+    def aprovar(self, request, pk=None):
+        company = self.get_object()
+        company.status = 'APROVADA'
+        company.save()
+        return Response({'status': 'Empresa aprovada'})
+
+    @action(detail=True, methods=['patch'], permission_classes=[IsAdminUserType])
+    def rejeitar(self, request, pk=None):
+        company = self.get_object()
+        company.status = 'REJEITADA'
+        company.save()
+        return Response({'status': 'Empresa rejeitada'})
+
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all()
@@ -31,24 +56,66 @@ class JobViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return Job.objects.filter(status='ATIVA')
-            
+
         if user.user_type == 'ADMIN':
             return Job.objects.all()
-        
+
         if user.user_type == 'RECRUTADOR':
-            # Recruiter sees their own jobs (any status)
             return Job.objects.filter(company__recruiter=user)
-        
-        # Aluno sees only active jobs
-        return Job.objects.filter(status='ATIVA')
+
+        return Job.objects.filter(
+            status='ATIVA',
+            company__status='APROVADA'
+        )
 
     def perform_create(self, serializer):
-        # Automatically link the job to the recruiter's company
         try:
             company = self.request.user.company
+            if company.status != 'APROVADA':
+                raise ValidationError({
+                    "detail": "Sua empresa precisa estar homologada."
+                })
             serializer.save(company=company)
         except Company.DoesNotExist:
-            # This should ideally be handled by a cleaner validation, 
-            # but for now, we'll raise an error.
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError("O usuário recrutador deve ter uma empresa vinculada.")
+            raise ValidationError({
+                "detail": "O recrutador precisa cadastrar uma empresa."
+            })
+
+
+class ApplicationViewSet(viewsets.ModelViewSet):
+    queryset = Application.objects.all()
+    serializer_class = ApplicationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Application.objects.all()
+        
+        job_id = self.request.query_params.get('job')
+        if job_id:
+            queryset = queryset.filter(job_id=job_id)
+
+        if user.user_type == 'ADMIN':
+            return queryset
+        if user.user_type == 'RECRUTADOR':
+            return queryset.filter(job__company__recruiter=user)
+        
+        # Aluno sees their own applications
+        try:
+            return queryset.filter(student=user.student_profile)
+        except Student.DoesNotExist:
+            return Application.objects.none()
+
+    def perform_create(self, serializer):
+        if self.request.user.user_type != 'ALUNO':
+            raise PermissionDenied("Apenas alunos podem se candidatar a vagas.")
+        
+        try:
+            student = self.request.user.student_profile
+            job_id = self.request.data.get('job')
+            if Application.objects.filter(student=student, job_id=job_id).exists():
+                raise ValidationError("Você já se candidatou a esta vaga.")
+                
+            serializer.save(student=student)
+        except Student.DoesNotExist:
+            raise ValidationError("O aluno deve ter um perfil completo.")

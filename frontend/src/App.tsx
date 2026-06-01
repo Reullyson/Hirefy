@@ -18,7 +18,10 @@ import { Layout as CompanyLayout } from "@/pages/empresa/Layout";
 
 // Telas de Aluno
 import { Dashboard as StudentDashboard } from "@/pages/aluno/Dashboard";
+import { Vagas as StudentVagas } from "@/pages/aluno/Vagas";
 import { Layout as StudentLayout } from "@/pages/aluno/Layout";
+import { MinhasVagas as StudentMinhasVagasPage } from "@/pages/aluno/MinhasVagas";
+import { StudentProfilePage } from "@/pages/aluno/StudentProfilePage";
 
 // Telas de Admin
 import AdminPanel from "@/pages/admin/AdminPanel";
@@ -27,6 +30,7 @@ import AdminPanel from "@/pages/admin/AdminPanel";
 import LoginPage from "@/pages/auth/LoginPage";
 import AdminLoginPage from "@/pages/auth/AdminLoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
+import AcceptInvitePage from "@/pages/auth/AcceptInvitePage";
 
 import NotFound from "@/pages/not-found";
 
@@ -67,6 +71,7 @@ function AppContent() {
         <Route path="/login" component={LoginPage} />
         <Route path="/admin/login" component={AdminLoginPage} />
         <Route path="/cadastro" component={RegisterPage} />
+        <Route path="/aceitar-convite" component={AcceptInvitePage} />
         <Route>
           <Redirect to="/login" />
         </Route>
@@ -119,9 +124,10 @@ function AppContent() {
       <StudentLayout>
         <Switch>
           <Route path="/" component={StudentDashboard} />
-          <Route path="/vagas" component={() => <div className="p-8">Em breve: Vagas para Alunos</div>} />
-          <Route path="/minhas-vagas" component={() => <div className="p-8">Em breve: Suas Candidaturas</div>} />
-          <Route path="/perfil" component={() => <div className="p-8">Em breve: Seu Perfil</div>} />
+          <Route path="/vagas" component={StudentVagas} />
+          <Route path="/vagas/:id" component={JobDetails} />
+          <Route path="/minhas-vagas" component={StudentMinhasVagasPage} />
+          <Route path="/perfil" component={StudentProfilePage} />
           <Route component={NotFound} />
         </Switch>
       </StudentLayout>
@@ -165,4 +171,3 @@ function App() {
 }
 
 export default App;
-
