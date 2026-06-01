@@ -15,7 +15,8 @@ import {
   Trash2, 
   Save, 
   Loader2,
-  Trophy
+  Trophy,
+  Award
 } from "lucide-react";
 
 export function StudentProfilePage() {
@@ -31,6 +32,7 @@ export function StudentProfilePage() {
     linkedin_url: "",
     portfolio_url: "",
     experiences: [],
+    courses: [],
   });
 
   const { data: user, isLoading } = useQuery({
@@ -54,6 +56,7 @@ export function StudentProfilePage() {
         linkedin_url: user.linkedin_url || "",
         portfolio_url: user.portfolio_url || "",
         experiences: user.experiences || [],
+        courses: user.courses || [],
       });
     }
   }, [user]);
@@ -95,6 +98,34 @@ export function StudentProfilePage() {
     const newExperiences = [...formData.experiences];
     newExperiences[index] = { ...newExperiences[index], [field]: value };
     setFormData({ ...formData, experiences: newExperiences });
+  };
+
+  const handleAddCourse = () => {
+    setFormData({
+      ...formData,
+      courses: [
+        ...formData.courses,
+        {
+          name: "",
+          issuer: "",
+          workload: 0,
+          completion_date: new Date().toISOString().split('T')[0],
+          certificate_url: "",
+        }
+      ]
+    });
+  };
+
+  const handleRemoveCourse = (index: number) => {
+    const newCourses = [...formData.courses];
+    newCourses.splice(index, 1);
+    setFormData({ ...formData, courses: newCourses });
+  };
+
+  const handleCourseChange = (index: number, field: string, value: any) => {
+    const newCourses = [...formData.courses];
+    newCourses[index] = { ...newCourses[index], [field]: value };
+    setFormData({ ...formData, courses: newCourses });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -347,14 +378,104 @@ export function StudentProfilePage() {
               )}
             </section>
 
+            {/* Cursos e Certificações */}
+            <section className="bg-card rounded-xl shadow-sm border border-border p-6 md:p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-primary" />
+                  <h3 className="text-foreground text-lg font-semibold">Cursos e Certificações</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddCourse}
+                  className="flex items-center gap-2 text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-all text-sm font-bold border border-primary/20"
+                >
+                  <Plus className="w-4 h-4" /> Adicionar
+                </button>
+              </div>
+
+              {formData.courses.length === 0 ? (
+                <div className="text-center py-8 border-2 border-dashed border-border rounded-xl">
+                  <p className="text-muted-foreground text-sm">Nenhum curso adicionado.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {formData.courses.map((course: any, index: number) => (
+                    <div key={index} className="p-4 border border-border rounded-xl bg-muted/30 space-y-4 relative">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCourse(index)}
+                        className="absolute top-4 right-4 text-destructive hover:bg-destructive/10 p-1.5 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase text-muted-foreground">Nome do Curso</label>
+                          <input
+                            type="text"
+                            value={course.name}
+                            onChange={(e) => handleCourseChange(index, 'name', e.target.value)}
+                            className="w-full px-4 py-2 border border-border rounded-lg bg-background"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase text-muted-foreground">Instituição Emissora</label>
+                          <input
+                            type="text"
+                            value={course.issuer}
+                            onChange={(e) => handleCourseChange(index, 'issuer', e.target.value)}
+                            className="w-full px-4 py-2 border border-border rounded-lg bg-background"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase text-muted-foreground">Carga Horária (horas)</label>
+                          <input
+                            type="number"
+                            value={course.workload}
+                            onChange={(e) => handleCourseChange(index, 'workload', parseInt(e.target.value))}
+                            className="w-full px-4 py-2 border border-border rounded-lg bg-background"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase text-muted-foreground">Data de Conclusão</label>
+                          <input
+                            type="date"
+                            value={course.completion_date}
+                            onChange={(e) => handleCourseChange(index, 'completion_date', e.target.value)}
+                            className="w-full px-4 py-2 border border-border rounded-lg bg-background"
+                            required
+                          />
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-xs font-bold uppercase text-muted-foreground">Link do Certificado (opcional)</label>
+                          <input
+                            type="url"
+                            value={course.certificate_url || ""}
+                            onChange={(e) => handleCourseChange(index, 'certificate_url', e.target.value)}
+                            className="w-full px-4 py-2 border border-border rounded-lg bg-background"
+                            placeholder="https://..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
             {/* Ações Finais */}
             <div className="flex justify-end pt-6">
               <button
                 type="submit"
-                disabled={mutation.isLoading}
+                disabled={mutation.isPending}
                 className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-bold hover:brightness-110 shadow-lg shadow-primary/20 transition-all flex items-center gap-2 disabled:opacity-50"
               >
-                {mutation.isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                {mutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                 Salvar Perfil Profissional
               </button>
             </div>

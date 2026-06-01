@@ -1,11 +1,12 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError, PermissionDenied
 
-from .models import Company, Job
-from .serializers import CompanySerializer, JobSerializer, JobListSerializer
-from .permissions import IsRecruiterOrAdmin, IsOwnerRecruiterOrAdmin
+from .models import Company, Job, Application
+from apps.users.models import Student
+from .serializers import CompanySerializer, JobSerializer, JobListSerializer, ApplicationSerializer
+from .permissions import IsRecruiterOrAdmin, IsOwnerRecruiterOrAdmin, IsAdminUserType
 
 
 class CompanyViewSet(viewsets.ModelViewSet):
@@ -15,13 +16,10 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-
         if user.user_type == 'ADMIN':
             return Company.objects.all()
-
         if user.user_type == 'RECRUTADOR':
             return Company.objects.filter(recruiter=user)
-
         return Company.objects.filter(status='APROVADA')
 
     def perform_create(self, serializer):
@@ -30,35 +28,19 @@ class CompanyViewSet(viewsets.ModelViewSet):
             status='PENDENTE'
         )
 
-    @action(detail=True, methods=['patch'])
+    @action(detail=True, methods=['patch'], permission_classes=[IsAdminUserType])
     def aprovar(self, request, pk=None):
-        if request.user.user_type != 'ADMIN':
-            raise ValidationError({
-                "detail": "Apenas o administrador pode aprovar empresas."
-            })
-
         company = self.get_object()
         company.status = 'APROVADA'
-        company.save(update_fields=['status'])
+        company.save()
+        return Response({'status': 'Empresa aprovada'})
 
-        return Response({
-            "detail": "Empresa aprovada com sucesso."
-        }, status=status.HTTP_200_OK)
-
-    @action(detail=True, methods=['patch'])
+    @action(detail=True, methods=['patch'], permission_classes=[IsAdminUserType])
     def rejeitar(self, request, pk=None):
-        if request.user.user_type != 'ADMIN':
-            raise ValidationError({
-                "detail": "Apenas o administrador pode rejeitar empresas."
-            })
-
         company = self.get_object()
         company.status = 'REJEITADA'
-        company.save(update_fields=['status'])
-
-        return Response({
-            "detail": "Empresa rejeitada com sucesso."
-        }, status=status.HTTP_200_OK)
+        company.save()
+        return Response({'status': 'Empresa rejeitada'})
 
 
 class JobViewSet(viewsets.ModelViewSet):
@@ -72,7 +54,6 @@ class JobViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-
         if not user.is_authenticated:
             return Job.objects.filter(status='ATIVA')
 
@@ -90,41 +71,51 @@ class JobViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         try:
             company = self.request.user.company
-
             if company.status != 'APROVADA':
                 raise ValidationError({
                     "detail": "Sua empresa precisa estar homologada."
                 })
-
             serializer.save(company=company)
-
         except Company.DoesNotExist:
             raise ValidationError({
                 "detail": "O recrutador precisa cadastrar uma empresa."
             })
 
-    @action(detail=True, methods=['patch'])
-    def aprovar(self, request, pk=None):
-        if request.user.user_type != 'ADMIN':
-            raise ValidationError({
-                "detail": "Apenas admin pode aprovar vagas."
-            })
 
-        job = self.get_object()
-        job.status = 'ATIVA'
-        job.save(update_fields=['status'])
+class ApplicationViewSet(viewsets.ModelViewSet):
+    queryset = Application.objects.all()
+    serializer_class = ApplicationSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-        return Response({"detail": "Vaga aprovada."})
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Application.objects.all()
+        
+        job_id = self.request.query_params.get('job')
+        if job_id:
+            queryset = queryset.filter(job_id=job_id)
 
-    @action(detail=True, methods=['patch'])
-    def rejeitar(self, request, pk=None):
-        if request.user.user_type != 'ADMIN':
-            raise ValidationError({
-                "detail": "Apenas admin pode rejeitar vagas."
-            })
+        if user.user_type == 'ADMIN':
+            return queryset
+        if user.user_type == 'RECRUTADOR':
+            return queryset.filter(job__company__recruiter=user)
+        
+        # Aluno sees their own applications
+        try:
+            return queryset.filter(student=user.student_profile)
+        except Student.DoesNotExist:
+            return Application.objects.none()
 
-        job = self.get_object()
-        job.status = 'ENCERRADA'
-        job.save(update_fields=['status'])
-
-        return Response({"detail": "Vaga rejeitada."})
+    def perform_create(self, serializer):
+        if self.request.user.user_type != 'ALUNO':
+            raise PermissionDenied("Apenas alunos podem se candidatar a vagas.")
+        
+        try:
+            student = self.request.user.student_profile
+            job_id = self.request.data.get('job')
+            if Application.objects.filter(student=student, job_id=job_id).exists():
+                raise ValidationError("Você já se candidatou a esta vaga.")
+                
+            serializer.save(student=student)
+        except Student.DoesNotExist:
+            raise ValidationError("O aluno deve ter um perfil completo.")

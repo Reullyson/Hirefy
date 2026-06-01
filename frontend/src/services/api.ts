@@ -167,8 +167,8 @@ export const companyService = {
 // ======================
 
 export const applicationService = {
-  list: () =>
-    api.get("/applications/"),
+  list: (jobId?: string | number) =>
+    api.get("/applications/", { params: { job: jobId } }),
 
   getById: (id: string | number) =>
     api.get(`/applications/${id}/`),
@@ -178,6 +178,9 @@ export const applicationService = {
 
   update: (id: string | number, data: any) =>
     api.patch(`/applications/${id}/`, data),
+
+  updateStatus: (id: string | number, status: string) =>
+    api.patch(`/applications/${id}/`, { status }),
 
   delete: (id: string | number) =>
     api.delete(`/applications/${id}/`),

@@ -1,8 +1,10 @@
-import { useQueries } from "@tanstack/react-query";
-import { jobService, scraperService } from "@/services/api";
-import { Loader2, ExternalLink, MapPin, Building2, Sparkles } from "lucide-react";
+import { useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
+import { jobService, scraperService, applicationService } from "@/services/api";
+import { Loader2, ExternalLink, MapPin, Building2, Sparkles, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface VagaDisplay {
+  id_real: string | number;
   id: string;
   titulo: string;
   empresa: string;
@@ -22,6 +24,7 @@ function normalizeJob(job: any): VagaDisplay {
     REMOTO: "Remoto", PRESENCIAL: "Presencial", HIBRIDO: "Híbrido",
   };
   return {
+    id_real: job.id,
     id: `job-${job.id}`,
     titulo: job.title,
     empresa: job.company_name,
@@ -35,6 +38,7 @@ function normalizeJob(job: any): VagaDisplay {
 
 function normalizeScraped(item: any): VagaDisplay {
   return {
+    id_real: 0,
     id: `scraped-${item.titulo}-${item.empresa}`,
     titulo: item.titulo,
     empresa: item.empresa,
@@ -48,6 +52,27 @@ function normalizeScraped(item: any): VagaDisplay {
 }
 
 export function Vagas() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const applyMutation = useMutation({
+    mutationFn: (jobId: string | number) => applicationService.create({ job: jobId }),
+    onSuccess: () => {
+      toast({
+        title: "Candidatura enviada!",
+        description: "Você se candidatou com sucesso para esta vaga.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["my-applications"] });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Erro ao se candidatar",
+        description: error.response?.data?.detail || "Ocorreu um erro inesperado.",
+      });
+    },
+  });
+
   const results = useQueries({
     queries: [
       {
@@ -152,9 +177,18 @@ export function Vagas() {
             )}
 
             {vaga.origem === "plataforma" ? (
-              <span className="mt-auto inline-flex items-center justify-center gap-2 text-sm font-medium text-gray-500 bg-gray-100 rounded-lg px-4 py-2 cursor-default">
-                Candidatura em breve
-              </span>
+              <button
+                onClick={() => applyMutation.mutate(vaga.id_real)}
+                disabled={applyMutation.isPending}
+                className="mt-auto inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors rounded-lg px-4 py-2 disabled:opacity-50"
+              >
+                {applyMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                Candidatar-se
+              </button>
             ) : (
               <a
                 href={vaga.link}
