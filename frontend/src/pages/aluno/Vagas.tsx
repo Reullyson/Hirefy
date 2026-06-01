@@ -100,13 +100,8 @@ export function Vagas() {
         </p>
       </header>
 
-      {/* Vagas da Plataforma */}
       {internas.length > 0 && (
         <div className="mb-10">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-green-600" />
-            Vagas da Plataforma
-          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {internas.map((vaga) => (
               <div
@@ -160,14 +155,12 @@ export function Vagas() {
         </div>
       )}
 
-      {/* Vagas do Scraping */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Vagas Externas</h2>
           {scraperLoading && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Buscando vagas...
+              Buscando vagas externas...
             </div>
           )}
         </div>
