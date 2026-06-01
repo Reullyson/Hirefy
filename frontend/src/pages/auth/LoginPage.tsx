@@ -167,9 +167,8 @@ const LoginPage = () => {
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1rem 0 1.5rem', fontSize: '0.875rem' }}>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#475569' }}><input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} style={{ accentColor: '#059669' }} /> Lembrar-me</label>
-                                <button type="button" onClick={() => setAlert({ message: 'Recuperação de senha em desenvolvimento!', type: 'info' })} style={{ color: '#059669', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Esqueceu sua senha?</button>
+                                <Link href="/esqueceu-senha" style={{ color: '#059669', textDecoration: 'none', cursor: 'pointer', fontWeight: 600 }}>Esqueceu sua senha?</Link>
                             </div>
-
                             <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.75rem', background: '#059669', color: '#F8FAFC', border: 'none', borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer', marginBottom: '1rem' }}>Entrar</button>
                         </form>
 

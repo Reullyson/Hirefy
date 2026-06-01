@@ -3,6 +3,12 @@
     <p>Olá, <strong>{{ student_name }}</strong>!</p>
     <p>Houve uma atualização no status da sua candidatura para a vaga <strong>{{ job_title }}</strong> na empresa <strong>{{ company_name }}</strong>.</p>
     <p>Novo status: <strong>{{ new_status }}</strong></p>
+    {% if feedback %}
+    <div style='background-color: #f1f5f9; padding: 15px; border-left: 4px solid #059669; margin: 20px 0;'>
+        <p style='margin: 0; font-weight: bold; color: #0f172a;'>Feedback do Recrutador:</p>
+        <p style='margin: 10px 0 0 0; color: #475569; font-style: italic;'>"{{ feedback }}"</p>
+    </div>
+    {% endif %}
     <p>Acesse a plataforma para mais detalhes.</p>
     <a href="#" class="button">Ver Candidatura</a>
 {% endblock %}

@@ -100,11 +100,21 @@ export function MinhasVagas() {
                 </div>
 
                 <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider w-fit ${getStatusColor(app.status)}`}>
-                  {getStatusIcon(app.status)}
-                  {getStatusLabel(app.status)}
+                {getStatusIcon(app.status)}
+                {getStatusLabel(app.status)}
                 </div>
-              </div>
-            </div>
+                </div>
+
+                {app.feedback && (
+                <div className="mt-4 p-4 bg-primary/5 rounded-lg border-l-4 border-primary">
+                <p className="text-xs font-bold text-primary uppercase mb-1 flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5" /> Mensagem do Recrutador
+                </p>
+                <p className="text-sm text-foreground italic">"{app.feedback}"</p>
+                </div>
+                )}
+                </div>
+
           ))}
         </div>
       )}

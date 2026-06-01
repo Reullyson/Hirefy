@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { userService, companyService } from "@/services/api";
+import { NotificationBell } from "./components/NotificationBell";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [locationPath] = useLocation();
@@ -177,10 +178,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <SidebarContent />
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-background">
-        {children}
-      </main>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Desktop Header */}
+        <header className="hidden md:flex h-16 items-center justify-between px-8 bg-white border-b border-border shrink-0">
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Painel do Recrutador
+            </h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+            <div className="h-8 w-[1px] bg-border mx-1" />
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-sm font-bold text-foreground leading-none">{user?.nome}</p>
+                <p className="text-[10px] text-muted-foreground mt-1 uppercase font-bold tracking-tighter">Recrutador</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto bg-background">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

@@ -74,12 +74,12 @@ const AcceptInvitePage = () => {
             <LoadingOverlay active={loading} />
 
             <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
-                <div className="bg-[#002b5c] p-8 text-white text-center relative">
+                <div className="bg-primary p-8 text-white text-center relative">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <FaRocket size={80} />
                     </div>
-                    <h1 className="text-3xl font-bold mb-2">Hirefy</h1>
-                    <p className="text-blue-100/80">Finalize seu cadastro de recrutador</p>
+                    <h1 className="text-3xl font-bold mb-2 text-white">Hirefy</h1>
+                    <p className="text-green-50">Finalize seu cadastro de recrutador</p>
                 </div>
 
                 <div className="p-8">
@@ -87,7 +87,7 @@ const AcceptInvitePage = () => {
 
                     {(!uid || !token) ? (
                         <div className="text-center py-4">
-                            <Link href="/" className="text-blue-600 hover:underline font-medium">
+                            <Link href="/" className="text-primary hover:underline font-medium">
                                 Voltar para a página inicial
                             </Link>
                         </div>
@@ -95,7 +95,7 @@ const AcceptInvitePage = () => {
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                                    <FaShieldAlt className="text-blue-600" />
+                                    <FaShieldAlt className="text-primary" />
                                     Defina sua Senha
                                 </label>
                                 <div className="relative">
@@ -103,7 +103,7 @@ const AcceptInvitePage = () => {
                                         type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                                         placeholder="No mínimo 8 caracteres"
                                     />
                                     <button
@@ -125,7 +125,7 @@ const AcceptInvitePage = () => {
                                         type={showConfirmPassword ? "text" : "password"}
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                                         placeholder="Repita sua senha"
                                     />
                                     <button
@@ -140,7 +140,7 @@ const AcceptInvitePage = () => {
 
                             <button
                                 type="submit"
-                                className="w-full bg-[#002b5c] hover:bg-[#003d82] text-white font-bold py-4 rounded-xl transition-all transform active:scale-[0.98] shadow-lg shadow-blue-900/10 flex justify-center items-center gap-2"
+                                className="w-full bg-primary hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all transform active:scale-[0.98] shadow-lg shadow-green-900/10 flex justify-center items-center gap-2"
                             >
                                 Finalizar Cadastro
                             </button>

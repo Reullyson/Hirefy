@@ -1,3 +1,5 @@
+import html
+from django.utils.html import strip_tags
 from rest_framework import serializers
 from .models import Company, Job, Application
 
@@ -48,6 +50,16 @@ class JobSerializer(serializers.ModelSerializer):
             except Exception:
                 return None
         return None
+
+    def validate(self, data):
+        # Limpar HTML de campos de texto
+        text_fields = ['title', 'description', 'requirements_mandatory', 'requirements_desirable', 'benefits']
+        for field in text_fields:
+            if field in data and data[field]:
+                # Remove tags HTML e decodifica entidades (ex: &nbsp;)
+                cleaned = strip_tags(data[field])
+                data[field] = html.unescape(cleaned).strip()
+        return data
 
     def validate_salary(self, value):
         if value is not None and value < 0:

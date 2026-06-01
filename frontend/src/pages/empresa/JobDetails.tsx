@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useLocation, useParams, Link } from "wouter";
-import { ArrowLeft, MapPin, Briefcase, Calendar, Users, FileText, Loader2, CheckCircle2, User, Mail, ExternalLink, Clock, XCircle, AlertCircle, Building2, Globe } from "lucide-react";
+import { ArrowLeft, MapPin, Briefcase, Calendar, Users, FileText, Loader2, CheckCircle2, User, Mail, ExternalLink, Clock, XCircle, AlertCircle, Building2, Globe, MessageSquareQuote } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { jobService, userService, applicationService, api } from "@/services/api";
 import { toast } from "sonner";
@@ -10,13 +11,20 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export function JobDetails() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+
+  const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [newStatus, setNewStatus] = useState("");
+  const [feedbackText, setFeedbackText] = useState("");
 
   const { data: user } = useQuery({
     queryKey: ["me"],
@@ -62,10 +70,12 @@ export function JobDetails() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ appId, status }: { appId: string | number, status: string }) => 
-      applicationService.updateStatus(appId, status),
+    mutationFn: ({ appId, status, feedback }: { appId: string | number, status: string, feedback?: string }) => 
+      applicationService.updateStatus(appId, status, feedback),
     onSuccess: () => {
       toast.success("Status atualizado!");
+      setSelectedApp(null);
+      setFeedbackText("");
       queryClient.invalidateQueries({ queryKey: ["job-candidates", id] });
     },
     onError: (error: any) => {
@@ -296,7 +306,11 @@ export function JobDetails() {
                             
                             <select
                               value={app.status}
-                              onChange={(e) => updateStatusMutation.mutate({ appId: app.id, status: e.target.value })}
+                              onChange={(e) => {
+                                setSelectedApp(app);
+                                setNewStatus(e.target.value);
+                                setFeedbackText(app.feedback || "");
+                              }}
                               disabled={updateStatusMutation.isLoading}
                               className="text-xs border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary bg-background"
                             >
@@ -307,10 +321,60 @@ export function JobDetails() {
                             </select>
                           </div>
                         </div>
+                        {app.feedback && (
+                          <div className="mt-3 p-3 bg-muted/30 rounded-lg border border-dashed border-border flex gap-2">
+                            <MessageSquareQuote className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <p className="text-xs text-muted-foreground italic">"{app.feedback}"</p>
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
                 </div>
+
+                {/* Feedback Dialog */}
+                <Dialog open={!!selectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <MessageSquareQuote className="w-5 h-5 text-primary" />
+                        Atualizar Candidatura
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Novo Status: <span className={getStatusColor(newStatus) + " px-2 py-0.5 rounded text-[10px] uppercase font-bold ml-2"}>{getStatusLabel(newStatus)}</span></p>
+                        <p className="text-[10px] text-muted-foreground">O aluno receberá um e-mail informando a mudança de status.</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold">Feedback para o Aluno (Opcional)</label>
+                        <Textarea 
+                          placeholder="Dê um feedback construtivo ou informe os próximos passos..."
+                          value={feedbackText}
+                          onChange={(e) => setFeedbackText(e.target.value)}
+                          className="min-h-[120px] text-sm"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setSelectedApp(null)} disabled={updateStatusMutation.isLoading}>
+                        Cancelar
+                      </Button>
+                      <Button 
+                        onClick={() => updateStatusMutation.mutate({ 
+                          appId: selectedApp.id, 
+                          status: newStatus, 
+                          feedback: feedbackText 
+                        })}
+                        disabled={updateStatusMutation.isLoading}
+                      >
+                        {updateStatusMutation.isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Confirmar e Enviar
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </div>

@@ -31,6 +31,8 @@ import LoginPage from "@/pages/auth/LoginPage";
 import AdminLoginPage from "@/pages/auth/AdminLoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
 import AcceptInvitePage from "@/pages/auth/AcceptInvitePage";
+import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 
 import NotFound from "@/pages/not-found";
 
@@ -72,6 +74,8 @@ function AppContent() {
         <Route path="/admin/login" component={AdminLoginPage} />
         <Route path="/cadastro" component={RegisterPage} />
         <Route path="/aceitar-convite" component={AcceptInvitePage} />
+        <Route path="/esqueceu-senha" component={ForgotPasswordPage} />
+        <Route path="/redefinir-senha" component={ResetPasswordPage} />
         <Route>
           <Redirect to="/login" />
         </Route>

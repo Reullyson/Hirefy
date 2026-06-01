@@ -145,22 +145,25 @@ async def scrape_gupy_job(page, url):
 
         # Mapping Location types
         location_type_map = {
+            'remote': 'REMOTO',
             'Remoto': 'REMOTO',
+            'on-site': 'PRESENCIAL',
             'Presencial': 'PRESENCIAL',
+            'hybrid': 'HIBRIDO',
             'Híbrido': 'HIBRIDO'
         }
 
         res = {
             'title': job_data.get('name'),
-            'description': job_data.get('description'),
-            'requirements_mandatory': job_data.get('requirements'),
+            'description': f"{job_data.get('description', '')}\n\n### Responsabilidades\n{job_data.get('responsibilities', '')}",
+            'requirements_mandatory': job_data.get('prerequisites'),
             'requirements_desirable': "",
-            'benefits': job_data.get('benefits'),
-            'level': level_map.get(job_data.get('careerLevel'), 'JUNIOR'),
+            'benefits': job_data.get('relevantExperiences'),
+            'level': level_map.get(job_data.get('careerLevel'), 'PLENO' if 'Pleno' in job_data.get('name', '') else 'JUNIOR'),
             'contract_type': contract_map.get(job_data.get('type'), 'CLT'),
             'location_type': location_type_map.get(job_data.get('workplaceType'), 'REMOTO'),
-            'city': job_data.get('city', 'Remoto'),
-            'state': job_data.get('state', 'Remote'),
+            'city': job_data.get('addressCity') or 'Remoto',
+            'state': job_data.get('addressState') or 'Remote',
             'workload': "Não informado",
             'education_level': "Não informado"
         }

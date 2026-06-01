@@ -6,3 +6,5 @@ python-dotenv
 google-auth
 django-environ
 requests
+django-anymail[brevo]
+python-decouple

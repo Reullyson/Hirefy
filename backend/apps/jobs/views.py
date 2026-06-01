@@ -1,3 +1,5 @@
+import requests
+from django.conf import settings
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -80,6 +82,43 @@ class JobViewSet(viewsets.ModelViewSet):
             raise ValidationError({
                 "detail": "O recrutador precisa cadastrar uma empresa."
             })
+
+    @action(detail=False, methods=['post'], url_path='import-gupy')
+    def import_gupy(self, request):
+        url = request.data.get('url')
+        if not url:
+            return Response({'detail': 'URL is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            company = self.request.user.company
+            if company.status != 'APROVADA':
+                return Response({'detail': 'Sua empresa precisa estar homologada.'}, status=status.HTTP_403_FORBIDDEN)
+        except Company.DoesNotExist:
+            return Response({'detail': 'O recrutador precisa cadastrar uma empresa.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Call scraping service
+        try:
+            # Assuming scraping service is running on port 5000 as configured in background tasks
+            scraping_url = f"http://localhost:5000/scrape-gupy?url={url}"
+            response = requests.get(scraping_url, timeout=30)
+            if response.status_code != 200:
+                return Response({'detail': 'Erro ao acessar o serviço de extração.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            job_data = response.json()
+            if 'error' in job_data:
+                return Response({'detail': job_data['error']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # Use serializer to save and clean HTML
+            serializer = self.get_serializer(data=job_data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(company=company, gupy_link=url)
+            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except requests.exceptions.RequestException as e:
+            return Response({'detail': f'Erro na comunicação com o serviço de scraping: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'detail': f'Erro interno: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ApplicationViewSet(viewsets.ModelViewSet):

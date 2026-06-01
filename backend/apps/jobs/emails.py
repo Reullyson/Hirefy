@@ -48,6 +48,7 @@ def send_application_status_update(application):
         'job_title': application.job.title,
         'company_name': application.job.company.name,
         'new_status': status_display,
+        'feedback': application.feedback,
     }
     send_hirefy_email(
         subject,

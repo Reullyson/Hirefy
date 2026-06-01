@@ -106,6 +106,12 @@ export const userService = {
     confirm_password: string;
   }) =>
     api.post("/users/change-password/", data),
+
+  resetPasswordRequest: (email: string) =>
+    api.post("/users/reset-password-request/", { email }),
+
+  resetPasswordConfirm: (data: any) =>
+    api.post("/users/reset-password-confirm/", data),
 };
 
 // ======================
@@ -133,6 +139,9 @@ export const jobService = {
 
   reject: (id: string | number) =>
     api.patch(`/jobs/${id}/rejeitar/`),
+
+  importGupy: (url: string) =>
+    api.post("/jobs/import-gupy/", { url }),
 };
 
 // ======================
@@ -179,8 +188,8 @@ export const applicationService = {
   update: (id: string | number, data: any) =>
     api.patch(`/applications/${id}/`, data),
 
-  updateStatus: (id: string | number, status: string) =>
-    api.patch(`/applications/${id}/`, { status }),
+  updateStatus: (id: string | number, status: string, feedback?: string) =>
+    api.patch(`/applications/${id}/`, { status, feedback }),
 
   delete: (id: string | number) =>
     api.delete(`/applications/${id}/`),

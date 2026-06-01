@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from django.contrib.auth.password_validation import validate_password
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -351,3 +353,74 @@ class UserViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK,
         )
+
+    @action(detail=False, methods=['post'], url_path='reset-password-request', permission_classes=[permissions.AllowAny])
+    def reset_password_request(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({'detail': 'O e-mail é obrigatório.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+            
+            # Gerar token e uid
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # Link para o frontend
+            reset_link = f"{settings.FRONTEND_URL}/redefinir-senha?uid={uid}&token={token}"
+            
+            # Enviar e-mail
+            subject = "Recuperação de Senha - Hirefy"
+            context = {
+                'nome': user.nome,
+                'reset_link': reset_link,
+            }
+            
+            html_content = render_to_string('emails/password_reset.html', context)
+            text_content = strip_tags(html_content)
+            
+            email_msg = EmailMultiAlternatives(
+                subject,
+                text_content,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email]
+            )
+            email_msg.attach_alternative(html_content, "text/html")
+            email_msg.send()
+            
+        except User.DoesNotExist:
+            # Por segurança, não informamos se o e-mail existe ou não
+            pass
+            
+        return Response({'detail': 'Se o e-mail estiver cadastrado, você receberá um link de recuperação em breve.'}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='reset-password-confirm', permission_classes=[permissions.AllowAny])
+    def reset_password_confirm(self, request):
+        uidb64 = request.data.get('uid')
+        token = request.data.get('token')
+        new_password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
+
+        if not all([uidb64, token, new_password, confirm_password]):
+            return Response({'detail': 'Todos os campos são obrigatórios.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_password != confirm_password:
+            return Response({'detail': 'As senhas não coincidem.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
+
+        if user is not None and default_token_generator.check_token(user, token):
+            try:
+                validate_password(new_password, user)
+                user.set_password(new_password)
+                user.save()
+                return Response({'detail': 'Senha redefinida com sucesso.'}, status=status.HTTP_200_OK)
+            except ValidationError as e:
+                return Response({'detail': e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'detail': 'Link de recuperação inválido ou expirado.'}, status=status.HTTP_400_BAD_REQUEST)

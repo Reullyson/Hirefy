@@ -26,6 +26,7 @@ class Company(models.Model):
         choices=STATUS_CHOICES,
         default='PENDENTE'
     )
+    feedback = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -126,6 +127,7 @@ class Application(models.Model):
         choices=STATUS_CHOICES,
         default='PENDENTE'
     )
+    feedback = models.TextField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
