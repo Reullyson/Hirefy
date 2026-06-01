@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+{% block content %}
+    <p>Olá, <strong>{{ student_name }}</strong>!</p>
+    <p>Houve uma atualização no status da sua candidatura para a vaga <strong>{{ job_title }}</strong> na empresa <strong>{{ company_name }}</strong>.</p>
+    <p>Novo status: <strong>{{ new_status }}</strong></p>
+    <p>Acesse a plataforma para mais detalhes.</p>
+    <a href="#" class="button">Ver Candidatura</a>
+{% endblock %}
