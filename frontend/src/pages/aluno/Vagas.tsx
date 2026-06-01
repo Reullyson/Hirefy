@@ -156,15 +156,6 @@ export function Vagas() {
       )}
 
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          {scraperLoading && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Buscando vagas externas...
-            </div>
-          )}
-        </div>
-
         {externas.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {externas.map((vaga) => (
