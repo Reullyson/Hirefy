@@ -18,7 +18,7 @@ export default defineConfig({
     host: "0.0.0.0",
     proxy: {
       "/scraper": {
-        target: "http://localhost:5000",
+        target: "http://scrapper:5000",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/scraper/, ""),
       },

@@ -3,14 +3,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      network: host
     container_name: hirefy-backend
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
-    env_file:
-      - .env
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
       - DATABASE_URL=sqlite:///db.sqlite3
@@ -34,17 +31,29 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      network: host
     container_name: hirefy-frontend
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    env_file:
-      - .env
     depends_on:
       - backend
+    networks:
+      - hirefy-network
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    container_name: hirefy-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+      - scrapper
     networks:
       - hirefy-network
     restart: unless-stopped

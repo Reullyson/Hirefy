@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Company, Job
+from .models import Company, Job, Application
 
 
 class CompanySerializer(serializers.ModelSerializer):
@@ -50,3 +50,26 @@ class JobListSerializer(serializers.ModelSerializer):
             'status',
             'created_at'
         ]
+
+
+class ApplicationSerializer(serializers.ModelSerializer):
+    job_title = serializers.ReadOnlyField(source='job.title')
+    company_name = serializers.ReadOnlyField(source='job.company.name')
+    student_name = serializers.ReadOnlyField(source='student.nome')
+    student_email = serializers.ReadOnlyField(source='student.email')
+
+    class Meta:
+        model = Application
+        fields = [
+            'id',
+            'job',
+            'job_title',
+            'company_name',
+            'student',
+            'student_name',
+            'student_email',
+            'status',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['student', 'created_at', 'updated_at']

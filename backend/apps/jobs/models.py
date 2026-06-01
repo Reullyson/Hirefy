@@ -100,3 +100,43 @@ class Job(models.Model):
         verbose_name = 'Vaga'
         verbose_name_plural = 'Vagas'
         ordering = ['-created_at']
+
+
+class Application(models.Model):
+    STATUS_CHOICES = (
+        ('PENDENTE', 'Pendente'),
+        ('ACEITA', 'Aceita'),
+        ('REJEITADA', 'Rejeitada'),
+        ('RETIRADA', 'Retirada'),
+    )
+
+    job = models.ForeignKey(
+        Job,
+        on_delete=models.CASCADE,
+        related_name='applications'
+    )
+
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='applications',
+        limit_choices_to={'user_type': 'ALUNO'}
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='PENDENTE'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.student.nome} - {self.job.title}"
+
+    class Meta:
+        verbose_name = 'Candidatura'
+        verbose_name_plural = 'Candidaturas'
+        unique_together = ('job', 'student')
+        ordering = ['-created_at']
