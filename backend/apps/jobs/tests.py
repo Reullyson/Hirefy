@@ -21,7 +21,8 @@ class JobCRUDTests(APITestCase):
         self.company_1 = Company.objects.create(
             name='Empresa 1',
             cnpj='11111111000199',
-            recruiter=self.recruiter_1
+            recruiter=self.recruiter_1,
+            status='APROVADA'
         )
         
         # Recruiter 2
@@ -34,7 +35,8 @@ class JobCRUDTests(APITestCase):
         self.company_2 = Company.objects.create(
             name='Empresa 2',
             cnpj='22222222000199',
-            recruiter=self.recruiter_2
+            recruiter=self.recruiter_2,
+            status='APROVADA'
         )
         
         # Aluno

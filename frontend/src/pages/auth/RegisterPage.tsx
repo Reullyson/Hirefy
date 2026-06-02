@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
 import { FaEye, FaEyeSlash, FaRocket, FaUserGraduate, FaBuilding, FaShieldAlt } from 'react-icons/fa';
-import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import Alert from './components/Alert';
 import LoadingOverlay from './components/LoadingOverlay';
@@ -20,7 +19,6 @@ const RegisterPage = () => {
     const [nomeEmpresa, setNomeEmpresa] = useState('');
     const [senha, setSenha] = useState('');
     const [confirmSenha, setConfirmSenha] = useState('');
-    const [termos, setTermos] = useState(false);
     const [showSenha, setShowSenha] = useState(false);
     const [showConfirmSenha, setShowConfirmSenha] = useState(false);
     const [alert, setAlert] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
@@ -40,26 +38,6 @@ const RegisterPage = () => {
             setAlert({ message: 'Dados do Google importados. Complete seu cadastro abaixo.', type: 'info' });
         }
     }, []);
-
-    const handleGoogleSuccess = (credentialResponse: any) => {
-        try {
-            const decoded: any = jwtDecode(credentialResponse.credential);
-            const googleEmail = decoded.email;
-            const googleName = decoded.name;
-
-            if (tipo === 'aluno' && !googleEmail.endsWith('@aluno.ifce.edu.br')) {
-                setAlert({ message: 'Apenas e-mails @aluno.ifce.edu.br são permitidos para estudantes.', type: 'error' });
-                return;
-            }
-
-            setNome(googleName);
-            setEmail(googleEmail);
-            setIsGoogleVerified(true);
-            setAlert({ message: `Olá ${googleName.split(' ')[0]}! Nome e E-mail foram preenchidos. Agora informe sua matrícula e senha.`, type: 'success' });
-        } catch (err) {
-            setAlert({ message: 'Erro ao processar dados do Google.', type: 'error' });
-        }
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -81,11 +59,6 @@ const RegisterPage = () => {
         
         if (senha.length < 8) {
             setAlert({ message: 'A senha deve ter pelo menos 8 caracteres', type: 'error' });
-            return;
-        }
-        
-        if (!termos) {
-            setAlert({ message: 'Você precisa aceitar os Termos de Uso e Política de Privacidade', type: 'error' });
             return;
         }
         
@@ -187,19 +160,7 @@ const RegisterPage = () => {
 
                     {alert && <Alert message={alert.message} type={alert.type} onClose={() => setAlert(null)} />}
 
-                    {/* Botão Google para preenchimento */}
-                    {tipo === 'aluno' && !isGoogleVerified && (
-                        <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem' }}>
-                            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.75rem', textAlign: 'center' }}>Facilite seu cadastro com Google:</p>
-                            <GoogleLogin 
-                                onSuccess={handleGoogleSuccess}
-                                onError={() => setAlert({ message: 'Falha ao obter dados do Google.', type: 'error' })}
-                                theme="outline"
-                                width="100%"
-                                text="continue_with"
-                            />
-                        </div>
-                    )}
+
 
                     {/* Tipo de conta */}
                     <div style={{ 
@@ -480,19 +441,6 @@ const RegisterPage = () => {
                                  Alterar e-mail/nome (sair do modo Google)
                              </button>
                         )}
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '1rem 0 1.5rem' }}>
-                            <input 
-                                type="checkbox" 
-                                checked={termos} 
-                                onChange={(e) => setTermos(e.target.checked)} 
-                                style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }} 
-                                required 
-                            />
-                            <label style={{ fontSize: '0.85rem', color: '#64748b', cursor: 'pointer' }}>
-                                Li e aceito os <a href="#" style={{ color: '#059669', textDecoration: 'none', fontWeight: 600 }}>Termos de Uso</a> e <a href="#" style={{ color: '#059669', textDecoration: 'none', fontWeight: 600 }}>Política de Privacidade</a>
-                            </label>
-                        </div>
 
                         <button 
                             type="submit" 

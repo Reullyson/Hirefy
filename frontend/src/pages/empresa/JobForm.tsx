@@ -67,7 +67,8 @@ export function JobForm() {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       setLocation("/vagas");
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Erro ao importar vaga da Gupy. Verifique se o link está correto.");
+      const message = error.response?.data?.detail || error.response?.data?.error || "Erro ao importar vaga da Gupy. Verifique se o link está correto.";
+      toast.error(message);
     } finally {
       setIsImporting(false);
     }
@@ -82,7 +83,22 @@ export function JobForm() {
       setLocation("/vagas");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || "Erro ao salvar vaga.");
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (data.detail) {
+          toast.error(data.detail);
+        } else {
+          // Mostrar o primeiro erro encontrado nos campos
+          const firstError = Object.values(data)[0];
+          if (Array.isArray(firstError)) {
+            toast.error(firstError[0]);
+          } else {
+            toast.error("Erro ao salvar vaga. Verifique os campos.");
+          }
+        }
+      } else {
+        toast.error("Erro de conexão com o servidor.");
+      }
     }
   });
 

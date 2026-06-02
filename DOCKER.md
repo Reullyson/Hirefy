@@ -28,7 +28,7 @@ DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
 # Frontend
-VITE_API_URL=http://localhost:8000
+VITE_API_URL=http://localhost:8000/api/
 ```
 
 ## Commands

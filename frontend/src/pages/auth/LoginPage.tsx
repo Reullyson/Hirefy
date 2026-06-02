@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { FaEye, FaEyeSlash, FaMapMarkerAlt, FaUserEdit, FaChartLine, FaHandshake, FaPaperPlane } from 'react-icons/fa';
-import { GoogleLogin } from '@react-oauth/google';
 import Alert from './components/Alert';
 import LoadingOverlay from './components/LoadingOverlay';
 import { authService } from '@/services/api';
@@ -41,36 +40,6 @@ const LoginPage = () => {
         } catch (err: any) {
             const errorMsg = err.response?.data?.detail || 'Erro ao realizar login. Verifique suas credenciais.';
             setAlert({ message: errorMsg, type: 'error' });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleGoogleSuccess = async (credentialResponse: any) => {
-        setLoading(true);
-        setAlert(null);
-        
-        try {
-            const response = await authService.googleLogin(credentialResponse.credential);
-            const { access, refresh } = response.data;
-            
-            localStorage.setItem('hirefy_access_token', access);
-            localStorage.setItem('hirefy_refresh_token', refresh);
-            
-            toast.success('Bem-vindo ao Hirefy!');
-            window.location.href = "/";
-        } catch (err: any) {
-            const errorMsg = err.response?.data?.detail || 'Erro ao realizar login com Google.';
-            setAlert({ message: errorMsg, type: 'error' });
-            
-            if (err.response?.status === 404) {
-                // Se não existir, sugere cadastro e passa dados se houver
-                const googleData = err.response.data.google_data;
-                if (googleData) {
-                    sessionStorage.setItem('hirefy_google_data', JSON.stringify(googleData));
-                    setTimeout(() => setLocation('/cadastro'), 3000);
-                }
-            }
         } finally {
             setLoading(false);
         }
@@ -128,20 +97,7 @@ const LoginPage = () => {
                             <button type="button" onClick={() => setUserType('admin')} style={{ flex: 1, padding: '0.625rem', cursor: 'pointer', borderRadius: '0.4rem', fontSize: '0.85rem', fontWeight: 600, background: userType === 'admin' ? '#059669' : 'transparent', color: userType === 'admin' ? '#F8FAFC' : '#64748b', border: 'none' }}>Admin</button>
                         </div>
 
-                        {/* Botão Google */}
-                        <div style={{ marginBottom: '1rem' }}>
-                            <GoogleLogin 
-                                onSuccess={handleGoogleSuccess}
-                                onError={() => setAlert({ message: 'Falha na autenticação com Google.', type: 'error' })}
-                                useOneTap
-                                theme="outline"
-                                width="100%"
-                                text="continue_with"
-                            />
-                        </div>
-
-                    <div style={{ textAlign: 'center', margin: '1rem 0', color: '#94a3b8', fontSize: '0.75rem' }}>ou</div>
-
+                        {/* Formulário */}
                         <form onSubmit={handleLogin}>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.375rem' }}>
