@@ -1,7 +1,6 @@
 import axios from "axios";
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_URL =import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
 
 /**
  * Instância base do Axios
@@ -78,7 +77,11 @@ export const userService = {
 
   deleteMe: () => api.delete("/users/me/"),
 
-  register: (data: any) => api.post("/users/", data),
+  downloadResume: () =>
+    api.get("/profile/resume/", { responseType: 'blob' }),
+
+  register: (data: any) =>
+    api.post("/users/", data),
 
   inviteAdmin: (data: { email: string; code: string }) =>
     api.post("/users/invite-admin/", data),

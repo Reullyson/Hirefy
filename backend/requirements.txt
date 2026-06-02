@@ -8,3 +8,4 @@ django-environ
 requests
 django-anymail[brevo]
 python-decouple
+reportlab

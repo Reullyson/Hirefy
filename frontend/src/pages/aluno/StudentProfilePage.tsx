@@ -133,6 +133,23 @@ export function StudentProfilePage() {
     mutation.mutate(formData);
   };
 
+  const handleDownloadResume = async () => {
+    try {
+      toast.info("Gerando currículo...");
+      const response = await userService.downloadResume();
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `curriculo_${formData.full_name || "aluno"}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("Currículo baixado com sucesso!");
+    } catch (error) {
+      toast.error("Erro ao baixar o currículo. Verifique se seu perfil está completo.");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -144,14 +161,23 @@ export function StudentProfilePage() {
   return (
     <div className="min-h-screen bg-background pb-12">
       <header className="bg-primary/5 border-b border-border px-4 py-8 md:px-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-foreground text-3xl font-bold tracking-tight flex items-center gap-3">
-            <User className="w-8 h-8 text-primary" />
-            Meu Perfil
-          </h1>
-          <p className="text-muted-foreground text-lg mt-2">
-            Mantenha suas informações atualizadas para se destacar nas vagas.
-          </p>
+        <div className="max-w-4xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-foreground text-3xl font-bold tracking-tight flex items-center gap-3">
+              <User className="w-8 h-8 text-primary" />
+              Meu Perfil
+            </h1>
+            <p className="text-muted-foreground text-lg mt-2">
+              Mantenha suas informações atualizadas para se destacar nas vagas.
+            </p>
+          </div>
+          <button
+            onClick={handleDownloadResume}
+            className="flex items-center gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-lg transition-colors font-medium whitespace-nowrap"
+          >
+            <Award className="w-5 h-5" />
+            Baixar Currículo PDF
+          </button>
         </div>
       </header>
 

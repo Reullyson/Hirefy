@@ -25,6 +25,7 @@ services:
     build:
       context: ./scraping
       dockerfile: Dockerfile
+      network: host
     container_name: hirefy-scrapper
     ports:
       - "5000:5000"

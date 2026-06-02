@@ -16,11 +16,13 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.http import HttpResponse
 
 from .serializers import UserSerializer
 from .google_auth import verify_google_token
 from apps.jobs.models import Company
 from apps.jobs.permissions import IsAdminUserType
+from .utils import generate_resume_pdf
 
 User = get_user_model()
 
@@ -53,6 +55,40 @@ def build_company_kwargs(company_name, cnpj, recruiter, extra_data=None):
 
     return kwargs
 
+
+class ResumeGeneratorView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if not hasattr(user, 'student_profile'):
+            return Response({"detail": "Apenas alunos podem gerar currículo."}, status=status.HTTP_403_FORBIDDEN)
+            
+        student = user.student_profile
+        pdf_bytes = generate_resume_pdf(student)
+        
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="curriculo_{student.full_name or "aluno"}.pdf"'
+        return response
+
+class CanViewUserPermission(permissions.BasePermission):
+    """
+    Permissão para visualizar o perfil de um usuário.
+    - Admins podem ver todos.
+    - Usuários podem ver a si mesmos.
+    - Recrutadores podem ver alunos.
+    """
+    def has_permission(self, request, view):
+        return request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.user_type == 'ADMIN':
+            return True
+        if request.user == obj:
+            return True
+        if request.user.user_type == 'RECRUTADOR':
+            return obj.user_type == 'ALUNO'
+        return False
 
 class GoogleLoginView(APIView):
     permission_classes = [permissions.AllowAny]
