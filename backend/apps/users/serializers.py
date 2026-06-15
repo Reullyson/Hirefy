@@ -37,6 +37,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     full_name = serializers.CharField(required=False, allow_blank=True)
     enrollment = serializers.CharField(required=False, allow_blank=True)
+    course = serializers.CharField(required=False, allow_blank=True)
     city = serializers.CharField(required=False, allow_blank=True)
     semester = serializers.IntegerField(required=False)
 
@@ -67,6 +68,7 @@ class UserSerializer(serializers.ModelSerializer):
             'is_active',
             'full_name',
             'enrollment',
+            'course',
             'city',
             'semester',
             'skills',
@@ -90,6 +92,7 @@ class UserSerializer(serializers.ModelSerializer):
             student = instance.student_profile
             ret['full_name'] = student.full_name
             ret['enrollment'] = student.enrollment
+            ret['course'] = student.course
             ret['city'] = student.city
             ret['semester'] = student.semester
             ret['skills'] = student.skills
@@ -141,6 +144,7 @@ class UserSerializer(serializers.ModelSerializer):
         student_fields = {
             'full_name': validated_data.pop('full_name', validated_data.get('nome')),
             'enrollment': validated_data.pop('enrollment', None),
+            'course': validated_data.pop('course', 'Ciência da Computação'),
             'city': validated_data.pop('city', None),
             'semester': validated_data.pop('semester', None),
             'skills': validated_data.pop('skills', None),
@@ -184,7 +188,7 @@ class UserSerializer(serializers.ModelSerializer):
         courses_data = validated_data.pop('courses', None)
 
         # Campos de perfil de aluno
-        student_fields = ['full_name', 'enrollment', 'city', 'semester', 'skills', 'github_url', 'linkedin_url', 'portfolio_url']
+        student_fields = ['full_name', 'enrollment', 'course', 'city', 'semester', 'skills', 'github_url', 'linkedin_url', 'portfolio_url']
         student_data = {}
         for field in student_fields:
             if field in validated_data:

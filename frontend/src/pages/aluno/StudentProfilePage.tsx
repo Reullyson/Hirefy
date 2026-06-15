@@ -26,6 +26,7 @@ export function StudentProfilePage() {
     nome: "",
     full_name: "",
     enrollment: "",
+    course: "",
     city: "",
     semester: 1,
     skills: "",
@@ -50,6 +51,7 @@ export function StudentProfilePage() {
         nome: user.nome || "",
         full_name: user.full_name || user.nome || "",
         enrollment: user.enrollment || "",
+        course: user.course || "",
         city: user.city || "",
         semester: user.semester || 1,
         skills: user.skills || "",
@@ -235,6 +237,29 @@ export function StudentProfilePage() {
                       disabled={mutation.isPending}
                       className="bg-primary text-primary-foreground px-3 rounded-lg hover:brightness-110 flex items-center justify-center transition-all disabled:opacity-50"
                       title="Salvar matrícula"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span className="ml-1 text-xs font-bold uppercase">OK</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground">Curso *</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.course}
+                      onChange={(e) => setFormData({ ...formData, course: e.target.value })}
+                      className="w-full px-4 py-2 border border-border rounded-lg bg-background"
+                      placeholder="Ex: Ciência da Computação"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={saveAttribute}
+                      disabled={mutation.isPending}
+                      className="bg-primary text-primary-foreground px-3 rounded-lg hover:brightness-110 flex items-center justify-center transition-all disabled:opacity-50"
+                      title="Salvar curso"
                     >
                       <Check className="w-4 h-4" />
                       <span className="ml-1 text-xs font-bold uppercase">OK</span>

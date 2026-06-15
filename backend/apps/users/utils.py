@@ -33,6 +33,7 @@ def generate_resume_pdf(student):
     portfolio = escape_latex(student.portfolio_url) if student.portfolio_url else ""
     
     enrollment = escape_latex(student.enrollment)
+    course = escape_latex(student.course or "Ciência da Computação")
     semester = escape_latex(student.semester)
     skills = escape_latex(student.skills) if student.skills else ""
 
@@ -111,7 +112,7 @@ def generate_resume_pdf(student):
 \\section*{{Educação}}
 \\hrule
 \\vspace{{2mm}}
-\\noindent \\textbf{{Matrícula:}} {enrollment} \\hfill \\textbf{{Semestre:}} {semester}º semestre
+\\noindent \\textbf{{Curso:}} {course} \\hfill \\textbf{{Semestre:}} {semester}º semestre
 
 \\vspace{{5mm}}
 

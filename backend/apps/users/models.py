@@ -50,6 +50,7 @@ class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
     full_name = models.CharField(max_length=255)
     enrollment = models.CharField(max_length=50, unique=True)
+    course = models.CharField(max_length=255, default='Ciência da Computação')
     city = models.CharField(max_length=100)
     semester = models.IntegerField()
     github_url = models.URLField(max_length=500, null=True, blank=True)
