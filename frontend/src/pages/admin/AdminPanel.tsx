@@ -375,9 +375,9 @@ function Dashboard() {
 function UsersPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("todos");
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [editingUser, setEditingUser] = useState<any>(null);
-  const [isInviting, setIsInviting] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
+  const [expandedMode, setExpandedMode] = useState<"view" | "edit">("view");
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const [inviteForm, setInviteForm] = useState({
     nome: "",
@@ -397,6 +397,8 @@ function UsersPage() {
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  const [editingTarget, setEditingTarget] = useState<any>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-users"],
@@ -427,8 +429,17 @@ function UsersPage() {
     return active ? "badge success" : "badge danger";
   };
 
-  const openEditModal = (user: any) => {
-    setEditingUser(user);
+  const openExpandedView = (user: any, mode: "view" | "edit") => {
+    if (expandedUserId === user.id && expandedMode === mode) {
+      setExpandedUserId(null);
+      setEditingTarget(null);
+      return;
+    }
+
+    setExpandedUserId(user.id);
+    setExpandedMode(mode);
+    setEditingTarget(user);
+
     setEditForm({
       nome: user.nome ?? "",
       email: user.email ?? "",
@@ -436,9 +447,9 @@ function UsersPage() {
     });
   };
 
-  const closeModals = () => {
-    setSelectedUser(null);
-    setEditingUser(null);
+  const closeExpanded = () => {
+    setExpandedUserId(null);
+    setEditingTarget(null);
   };
 
   const handleInvite = async () => {
@@ -475,7 +486,7 @@ function UsersPage() {
         cnpj: "",
       });
 
-      setIsInviting(false);
+      setInviteOpen(false);
       await refetch();
     } catch (error: any) {
       setInviteFeedback({
@@ -492,17 +503,17 @@ function UsersPage() {
   };
 
   const handleSave = async () => {
-    if (!editingUser) return;
+    if (!editingTarget) return;
 
     try {
-      await userService.updateUser(editingUser.id, {
+      await userService.updateUser(editingTarget.id, {
         nome: editForm.nome,
         email: editForm.email,
         user_type: editForm.user_type,
       });
 
       await refetch();
-      closeModals();
+      closeExpanded();
     } catch (error: any) {
       alert(error?.response?.data?.detail || "Erro ao atualizar usuário.");
     }
@@ -550,10 +561,10 @@ function UsersPage() {
         <button
           className="small-button primary"
           style={{ display: "flex", alignItems: "center", gap: "8px" }}
-          onClick={() => setIsInviting((prev) => !prev)}
+          onClick={() => setInviteOpen((prev) => !prev)}
         >
           <Mail size={16} />
-          {isInviting ? "Fechar Convite" : "Convidar Empresa"}
+          {inviteOpen ? "Fechar Convite" : "Convidar Empresa"}
         </button>
       </div>
 
@@ -614,7 +625,7 @@ function UsersPage() {
         />
       </div>
 
-      {isInviting && (
+      {inviteOpen && (
         <div
           className="detail-card"
           style={{
@@ -634,7 +645,8 @@ function UsersPage() {
 
             <button
               className="small-button secondary"
-              onClick={() => setIsInviting(false)}
+              onClick={() => setInviteOpen(false)}
+              type="button"
             >
               Fechar
             </button>
@@ -709,7 +721,7 @@ function UsersPage() {
           >
             <button
               className="small-button secondary"
-              onClick={() => setIsInviting(false)}
+              onClick={() => setInviteOpen(false)}
               type="button"
             >
               Cancelar
@@ -747,51 +759,181 @@ function UsersPage() {
 
           <tbody>
             {filteredUsers.map((user: any) => (
-              <tr key={user.id}>
-                <td>{user.nome}</td>
-                <td>{user.email}</td>
-                <td>{user.user_type}</td>
-                <td>
-                  <span className={getBadgeClass(!!user.is_active)}>
-                    {user.is_active ? "Ativo" : "Bloqueado"}
-                  </span>
-                </td>
-                <td>
-                  <div className="actions">
-                    <button
-                      className="icon-button"
-                      title="Ver"
-                      onClick={() => setSelectedUser(user)}
-                    >
-                      <Eye size={16} />
-                    </button>
+              <>
+                <tr key={user.id}>
+                  <td>{user.nome}</td>
+                  <td>{user.email}</td>
+                  <td>{user.user_type}</td>
+                  <td>
+                    <span className={getBadgeClass(!!user.is_active)}>
+                      {user.is_active ? "Ativo" : "Bloqueado"}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="actions">
+                      <button
+                        className="icon-button"
+                        title="Ver"
+                        onClick={() => openExpandedView(user, "view")}
+                      >
+                        <Eye size={16} />
+                      </button>
 
-                    <button
-                      className="icon-button"
-                      title="Editar"
-                      onClick={() => openEditModal(user)}
-                    >
-                      <Pencil size={16} />
-                    </button>
+                      <button
+                        className="icon-button"
+                        title="Editar"
+                        onClick={() => openExpandedView(user, "edit")}
+                      >
+                        <Pencil size={16} />
+                      </button>
 
-                    <button
-                      className="icon-button"
-                      title="Bloquear / Desbloquear"
-                      onClick={() => handleToggleActive(user)}
-                    >
-                      <ShieldX size={16} />
-                    </button>
+                      <button
+                        className="icon-button"
+                        title="Bloquear / Desbloquear"
+                        onClick={() => handleToggleActive(user)}
+                      >
+                        <ShieldX size={16} />
+                      </button>
 
-                    <button
-                      className="icon-button-danger"
-                      title="Excluir"
-                      onClick={() => handleDelete(user)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                      <button
+                        className="icon-button-danger"
+                        title="Excluir"
+                        onClick={() => handleDelete(user)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                {expandedUserId === user.id && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 0, borderBottom: "1px solid #1f2937" }}>
+                      <div
+                        style={{
+                          padding: "18px",
+                          background: "rgba(15,23,42,0.75)",
+                          borderTop: "1px solid #334155",
+                        }}
+                      >
+                        <div className="detail-header" style={{ marginBottom: "16px" }}>
+                          <div>
+                            <h3 style={{ marginBottom: "4px" }}>
+                              {expandedMode === "view"
+                                ? "Detalhes do Usuário"
+                                : "Editar Usuário"}
+                            </h3>
+                            <p className="muted">
+                              {user.nome} • {user.email}
+                            </p>
+                          </div>
+
+                          <button
+                            className="small-button secondary"
+                            onClick={closeExpanded}
+                            type="button"
+                          >
+                            Fechar
+                          </button>
+                        </div>
+
+                        {expandedMode === "view" ? (
+                          <div className="detail-grid">
+                            <div className="detail-card">
+                              <strong>Dados principais</strong>
+                              <p>Nome: {user.nome}</p>
+                              <p>Email: {user.email}</p>
+                              <p>Tipo: {user.user_type}</p>
+                              <p>Status: {user.is_active ? "Ativo" : "Bloqueado"}</p>
+                            </div>
+
+                            <div className="detail-card">
+                              <strong>Informações técnicas</strong>
+                              <p>ID: {user.id}</p>
+                              <p>Cadastro: {user.date_joined || "-"}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="detail-grid">
+                            <div className="detail-card">
+                              <strong>Dados do usuário</strong>
+                              <div style={{ display: "grid", gap: "12px", marginTop: "12px" }}>
+                                <input
+                                  className="input"
+                                  value={editForm.nome}
+                                  onChange={(e) =>
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      nome: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="Nome"
+                                />
+
+                                <input
+                                  className="input"
+                                  value={editForm.email}
+                                  onChange={(e) =>
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      email: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="Email"
+                                />
+
+                                <select
+                                  className="input"
+                                  value={editForm.user_type}
+                                  onChange={(e) =>
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      user_type: e.target.value,
+                                    }))
+                                  }
+                                >
+                                  <option value="ALUNO">ALUNO</option>
+                                  <option value="RECRUTADOR">RECRUTADOR</option>
+                                  <option value="ADMIN">ADMIN</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="detail-card">
+                              <strong>Resumo</strong>
+                              <p>Nome: {editForm.nome}</p>
+                              <p>Email: {editForm.email}</p>
+                              <p>Tipo: {editForm.user_type}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {expandedMode === "edit" && (
+                          <div
+                            className="action-row"
+                            style={{ marginTop: "16px", justifyContent: "flex-end" }}
+                          >
+                            <button
+                              className="small-button secondary"
+                              onClick={closeExpanded}
+                              type="button"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              className="small-button primary"
+                              onClick={handleSave}
+                              type="button"
+                            >
+                              Salvar alterações
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>
@@ -802,114 +944,6 @@ function UsersPage() {
           </div>
         )}
       </div>
-
-      {selectedUser && (
-        <div className="modal-backdrop" onClick={closeModals}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="detail-header">
-              <div>
-                <h3>Detalhes do Usuário</h3>
-                <p className="muted">Visualização rápida do cadastro</p>
-              </div>
-              <button className="small-button secondary" onClick={closeModals}>
-                Fechar
-              </button>
-            </div>
-
-            <div className="detail-grid">
-              <div className="detail-card">
-                <strong>Dados principais</strong>
-                <p>Nome: {selectedUser.nome}</p>
-                <p>Email: {selectedUser.email}</p>
-                <p>Tipo: {selectedUser.user_type}</p>
-                <p>Status: {selectedUser.is_active ? "Ativo" : "Bloqueado"}</p>
-              </div>
-
-              <div className="detail-card">
-                <strong>Informações técnicas</strong>
-                <p>ID: {selectedUser.id}</p>
-                <p>Cadastro: {selectedUser.date_joined || "-"}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editingUser && (
-        <div className="modal-backdrop" onClick={closeModals}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="detail-header">
-              <div>
-                <h3>Editar Usuário</h3>
-                <p className="muted">Atualize os dados do cadastro</p>
-              </div>
-              <button className="small-button secondary" onClick={closeModals}>
-                Fechar
-              </button>
-            </div>
-
-            <div className="detail-grid">
-              <div className="detail-card">
-                <strong>Dados do usuário</strong>
-
-                <div style={{ display: "grid", gap: "12px" }}>
-                  <input
-                    className="input"
-                    value={editForm.nome}
-                    onChange={(e) =>
-                      setEditForm((prev) => ({ ...prev, nome: e.target.value }))
-                    }
-                    placeholder="Nome"
-                  />
-
-                  <input
-                    className="input"
-                    value={editForm.email}
-                    onChange={(e) =>
-                      setEditForm((prev) => ({ ...prev, email: e.target.value }))
-                    }
-                    placeholder="Email"
-                  />
-
-                  <select
-                    className="input"
-                    value={editForm.user_type}
-                    onChange={(e) =>
-                      setEditForm((prev) => ({
-                        ...prev,
-                        user_type: e.target.value,
-                      }))
-                    }
-                  >
-                    <option value="ALUNO">ALUNO</option>
-                    <option value="RECRUTADOR">RECRUTADOR</option>
-                    <option value="ADMIN">ADMIN</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="detail-card">
-                <strong>Resumo</strong>
-                <p>Nome: {editForm.nome}</p>
-                <p>Email: {editForm.email}</p>
-                <p>Tipo: {editForm.user_type}</p>
-              </div>
-            </div>
-
-            <div
-              className="action-row"
-              style={{ marginTop: "16px", justifyContent: "flex-end" }}
-            >
-              <button className="small-button secondary" onClick={closeModals}>
-                Cancelar
-              </button>
-              <button className="small-button primary" onClick={handleSave}>
-                Salvar alterações
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
