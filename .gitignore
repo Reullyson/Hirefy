@@ -14,7 +14,8 @@ venv.bak/
 
 # SQLite
 *.sqlite3
-
+db.sqlite3
+0005_student_course.py
 # Credentials
 admins_credentials.txt
 secrets.txt
