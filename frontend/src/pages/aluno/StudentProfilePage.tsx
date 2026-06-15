@@ -16,7 +16,8 @@ import {
   Save, 
   Loader2,
   Trophy,
-  Award
+  Award,
+  Check
 } from "lucide-react";
 
 export function StudentProfilePage() {
@@ -65,12 +66,16 @@ export function StudentProfilePage() {
     mutationFn: (data: any) => userService.updateMe(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["me"] });
-      toast.success("Perfil atualizado com sucesso!");
+      toast.success("Campo atualizado com sucesso!");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || "Erro ao atualizar perfil.");
+      toast.error(error.response?.data?.detail || "Erro ao atualizar campo.");
     }
   });
+
+  const saveAttribute = () => {
+    mutation.mutate(formData);
+  };
 
   const handleAddExperience = () => {
     setFormData({
@@ -194,45 +199,93 @@ export function StudentProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Nome Completo *</label>
-                  <input
-                    type="text"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className="w-full px-4 py-2 border border-border rounded-lg bg-background"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                      className="w-full px-4 py-2 border border-border rounded-lg bg-background"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={saveAttribute}
+                      disabled={mutation.isPending}
+                      className="bg-primary text-primary-foreground px-3 rounded-lg hover:brightness-110 flex items-center justify-center transition-all disabled:opacity-50"
+                      title="Salvar nome"
+                    >
+                      {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      <span className="ml-1 text-xs font-bold uppercase">OK</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Matrícula *</label>
-                  <input
-                    type="text"
-                    value={formData.enrollment}
-                    onChange={(e) => setFormData({ ...formData, enrollment: e.target.value })}
-                    className="w-full px-4 py-2 border border-border rounded-lg bg-background"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.enrollment}
+                      onChange={(e) => setFormData({ ...formData, enrollment: e.target.value })}
+                      className="w-full px-4 py-2 border border-border rounded-lg bg-background"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={saveAttribute}
+                      disabled={mutation.isPending}
+                      className="bg-primary text-primary-foreground px-3 rounded-lg hover:brightness-110 flex items-center justify-center transition-all disabled:opacity-50"
+                      title="Salvar matrícula"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span className="ml-1 text-xs font-bold uppercase">OK</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Cidade *</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-4 py-2 border border-border rounded-lg bg-background"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="w-full px-4 py-2 border border-border rounded-lg bg-background"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={saveAttribute}
+                      disabled={mutation.isPending}
+                      className="bg-primary text-primary-foreground px-3 rounded-lg hover:brightness-110 flex items-center justify-center transition-all disabled:opacity-50"
+                      title="Salvar cidade"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span className="ml-1 text-xs font-bold uppercase">OK</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Semestre Atual *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="12"
-                    value={formData.semester}
-                    onChange={(e) => setFormData({ ...formData, semester: parseInt(e.target.value) })}
-                    className="w-full px-4 py-2 border border-border rounded-lg bg-background"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      max="12"
+                      value={formData.semester}
+                      onChange={(e) => setFormData({ ...formData, semester: parseInt(e.target.value) })}
+                      className="w-full px-4 py-2 border border-border rounded-lg bg-background"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={saveAttribute}
+                      disabled={mutation.isPending}
+                      className="bg-primary text-primary-foreground px-3 rounded-lg hover:brightness-110 flex items-center justify-center transition-all disabled:opacity-50"
+                      title="Salvar semestre"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span className="ml-1 text-xs font-bold uppercase">OK</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -245,12 +298,26 @@ export function StudentProfilePage() {
               </div>
               <div className="space-y-4">
                 <label className="text-sm font-semibold text-foreground">Habilidades e Tecnologias (separadas por vírgula)</label>
-                <textarea
-                  value={formData.skills}
-                  onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
-                  placeholder="Ex: React, Node.js, Python, TypeScript, Figma..."
-                  className="w-full px-4 py-3 border border-border rounded-lg bg-background min-h-[100px]"
-                />
+                <div className="flex gap-2">
+                  <textarea
+                    value={formData.skills}
+                    onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
+                    placeholder="Ex: React, Node.js, Python, TypeScript, Figma..."
+                    className="w-full px-4 py-3 border border-border rounded-lg bg-background min-h-[100px]"
+                  />
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={saveAttribute}
+                      disabled={mutation.isPending}
+                      className="bg-primary text-primary-foreground px-4 h-full rounded-lg hover:brightness-110 flex flex-col items-center justify-center transition-all disabled:opacity-50 gap-2"
+                      title="Salvar competências"
+                    >
+                      <Check className="w-6 h-6" />
+                      <span className="text-xs font-bold uppercase">OK</span>
+                    </button>
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground italic">
                   * Este campo é obrigatório para se candidatar às vagas.
                 </p>
@@ -268,37 +335,70 @@ export function StudentProfilePage() {
                   <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Github className="w-4 h-4" /> GitHub
                   </label>
-                  <input
-                    type="url"
-                    value={formData.github_url}
-                    onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
-                    className="w-full px-4 py-2 border border-border rounded-lg bg-background"
-                    placeholder="https://github.com/..."
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={formData.github_url}
+                      onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
+                      className="w-full px-4 py-2 border border-border rounded-lg bg-background text-sm"
+                      placeholder="https://github.com/..."
+                    />
+                    <button
+                      type="button"
+                      onClick={saveAttribute}
+                      disabled={mutation.isPending}
+                      className="bg-primary text-primary-foreground px-2 rounded-lg hover:brightness-110 flex items-center justify-center transition-all disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span className="ml-1 text-[10px] font-bold">OK</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Linkedin className="w-4 h-4" /> LinkedIn
                   </label>
-                  <input
-                    type="url"
-                    value={formData.linkedin_url}
-                    onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
-                    className="w-full px-4 py-2 border border-border rounded-lg bg-background"
-                    placeholder="https://linkedin.com/in/..."
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={formData.linkedin_url}
+                      onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
+                      className="w-full px-4 py-2 border border-border rounded-lg bg-background text-sm"
+                      placeholder="https://linkedin.com/in/..."
+                    />
+                    <button
+                      type="button"
+                      onClick={saveAttribute}
+                      disabled={mutation.isPending}
+                      className="bg-primary text-primary-foreground px-2 rounded-lg hover:brightness-110 flex items-center justify-center transition-all disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span className="ml-1 text-[10px] font-bold">OK</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Globe className="w-4 h-4" /> Portfólio
                   </label>
-                  <input
-                    type="url"
-                    value={formData.portfolio_url}
-                    onChange={(e) => setFormData({ ...formData, portfolio_url: e.target.value })}
-                    className="w-full px-4 py-2 border border-border rounded-lg bg-background"
-                    placeholder="https://seusite.com"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={formData.portfolio_url}
+                      onChange={(e) => setFormData({ ...formData, portfolio_url: e.target.value })}
+                      className="w-full px-4 py-2 border border-border rounded-lg bg-background text-sm"
+                      placeholder="https://seusite.com"
+                    />
+                    <button
+                      type="button"
+                      onClick={saveAttribute}
+                      disabled={mutation.isPending}
+                      className="bg-primary text-primary-foreground px-2 rounded-lg hover:brightness-110 flex items-center justify-center transition-all disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span className="ml-1 text-[10px] font-bold">OK</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -328,13 +428,24 @@ export function StudentProfilePage() {
                 <div className="space-y-6">
                   {formData.experiences.map((exp: any, index: number) => (
                     <div key={index} className="p-4 border border-border rounded-xl bg-muted/30 space-y-4 relative">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveExperience(index)}
-                        className="absolute top-4 right-4 text-destructive hover:bg-destructive/10 p-1.5 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="absolute top-4 right-4 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={saveAttribute}
+                          disabled={mutation.isPending}
+                          className="bg-primary text-primary-foreground p-1.5 rounded-lg hover:brightness-110 transition-colors"
+                          title="Salvar esta experiência"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveExperience(index)}
+                          className="text-destructive hover:bg-destructive/10 p-1.5 rounded-lg transition-colors border border-destructive/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -428,13 +539,24 @@ export function StudentProfilePage() {
                 <div className="space-y-6">
                   {formData.courses.map((course: any, index: number) => (
                     <div key={index} className="p-4 border border-border rounded-xl bg-muted/30 space-y-4 relative">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCourse(index)}
-                        className="absolute top-4 right-4 text-destructive hover:bg-destructive/10 p-1.5 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="absolute top-4 right-4 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={saveAttribute}
+                          disabled={mutation.isPending}
+                          className="bg-primary text-primary-foreground p-1.5 rounded-lg hover:brightness-110 transition-colors"
+                          title="Salvar este curso"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCourse(index)}
+                          className="text-destructive hover:bg-destructive/10 p-1.5 rounded-lg transition-colors border border-destructive/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">

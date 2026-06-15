@@ -43,8 +43,8 @@ const ResetPasswordPage = () => {
 
         try {
             await userService.resetPasswordConfirm({
-                uid,
-                token,
+                uid: uid!,
+                token: token!,
                 password,
                 confirm_password: confirmPassword
             });

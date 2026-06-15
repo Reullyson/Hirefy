@@ -49,8 +49,8 @@ const AcceptInvitePage = () => {
 
         try {
             await userService.acceptInvite({
-                uid,
-                token,
+                uid: uid!,
+                token: token!,
                 password,
                 confirm_password: confirmPassword
             });
