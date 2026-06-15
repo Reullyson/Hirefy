@@ -112,7 +112,7 @@ def generate_resume_pdf(student):
 \\section*{{Educação}}
 \\hrule
 \\vspace{{2mm}}
-\\noindent \\textbf{{Curso:}} {course} \\hfill \\textbf{{Semestre:}} {semester}º semestre
+\\noindent \\textbf{{Graduação em {course}}} \\hfill \\textbf{{Semestre:}} {semester}º semestre
 
 \\vspace{{5mm}}
 
