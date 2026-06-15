@@ -35,20 +35,20 @@ class UserSerializer(serializers.ModelSerializer):
     experiences = ExperienceSerializer(many=True, required=False)
     courses = CourseSerializer(many=True, required=False)
 
-    full_name = serializers.CharField(required=False)
-    enrollment = serializers.CharField(required=False)
-    city = serializers.CharField(required=False)
+    full_name = serializers.CharField(required=False, allow_blank=True)
+    enrollment = serializers.CharField(required=False, allow_blank=True)
+    city = serializers.CharField(required=False, allow_blank=True)
     semester = serializers.IntegerField(required=False)
 
-    github_url = serializers.URLField(required=False, allow_null=True)
-    linkedin_url = serializers.URLField(required=False, allow_null=True)
-    portfolio_url = serializers.URLField(required=False, allow_null=True)
-    skills = serializers.CharField(required=False, allow_null=True)
+    github_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
+    linkedin_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
+    portfolio_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
+    skills = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     is_active = serializers.BooleanField(default=True)
 
-    cnpj = serializers.CharField(required=False)
-    company_name = serializers.CharField(required=False)
+    cnpj = serializers.CharField(required=False, allow_blank=True)
+    company_name = serializers.CharField(required=False, allow_blank=True)
 
     password = serializers.CharField(
         write_only=True,
