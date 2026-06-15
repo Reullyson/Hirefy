@@ -68,15 +68,15 @@ def generate_resume_pdf(student):
 
     # Courses
     courses_tex = ""
-    courses = student.courses.all()
-    if courses.exists():
+    courses_list = student.courses.all()
+    if courses_list.exists():
         courses_tex += r"\section*{Cursos e Certificações}" + "\n"
         courses_tex += r"\hrule" + "\n"
         courses_tex += r"\vspace{2mm}" + "\n"
-        for course in courses:
-            name = escape_latex(course.name)
-            issuer = escape_latex(course.issuer)
-            workload = escape_latex(course.workload)
+        for c in courses_list:
+            name = escape_latex(c.name)
+            issuer = escape_latex(c.issuer)
+            workload = escape_latex(c.workload)
             courses_tex += rf"\noindent \textbf{{{name}}} - {issuer} \hfill {workload}h" + "\n"
             courses_tex += r"\vspace{2mm}" + "\n"
 
