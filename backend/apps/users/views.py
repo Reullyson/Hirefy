@@ -182,13 +182,11 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == "create":
             return [permissions.AllowAny()]
 
-<<<<<<< HEAD
         if self.action in ["accept_invite", "reset_password_request", "reset_password_confirm"]:
             return [permissions.AllowAny()]
-=======
+
         if self.action == "retrieve":
             return [permissions.IsAuthenticated(), CanViewUserPermission()]
->>>>>>> 124ef22 (fix: resolve frontend typecheck errors and improve email templates)
 
         if self.action in [
             "invite_admin",
@@ -272,24 +270,12 @@ class UserViewSet(viewsets.ModelViewSet):
 
         send_mail(
             subject="Convite para administração do Hirefy",
-<<<<<<< HEAD
-            message=(
-                f"Olá, {nome_base}!\n\n"
-                f"Você foi convidado para acessar o painel administrativo do Hirefy.\n\n"
-                f"Credenciais de acesso:\n"
-                f"E-mail: {email}\n"
-                f"Senha temporária: {temp_password}\n\n"
-                f"Após entrar no sistema, altere sua senha imediatamente."
-            ),
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
-=======
             message=message_text,
             from_email=getattr(
                 settings,
                 "DEFAULT_FROM_EMAIL",
                 None,
             ),
->>>>>>> 124ef22 (fix: resolve frontend typecheck errors and improve email templates)
             recipient_list=[email],
             fail_silently=False,
             html_message=html_message,
@@ -321,61 +307,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="invite-recruiter")
     def invite_recruiter(self, request):
-<<<<<<< HEAD
         nome = request.data.get("nome")
         email = request.data.get("email")
         company_name = request.data.get("company_name")
         cnpj = request.data.get("cnpj")
-=======
-        serializer = InviteRecruiterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        # Criar o usuário como RECRUTADOR e inativo
-        data = serializer.validated_data
-        user_data = {
-            'email': data['email'],
-            'nome': data['nome'],
-            'user_type': 'RECRUTADOR',
-            'is_active': False,
-            'company_name': data['company_name'],
-            'cnpj': data['cnpj']
-        }
-        
-        user_serializer = UserSerializer(data=user_data)
-        user_serializer.is_valid(raise_exception=True)
-        user = user_serializer.save()
-        
-        # Gerar token
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        
-        # Enviar email
-        invite_link = f"{settings.FRONTEND_URL}/aceitar-convite?uid={uid}&token={token}"
-        
-        subject = 'Convite para a Plataforma Hirefy'
-        message = f'Olá {user.nome},\n\nVocê foi convidado para se cadastrar como recrutador na plataforma Hirefy pela empresa {data["company_name"]}.\n\nPara completar seu cadastro e definir sua senha, acesse o link abaixo:\n\n{invite_link}\n\nAtenciosamente,\nEquipe Hirefy'
-        html_message = f'''
-        <p>Olá {user.nome},</p>
-        <p>Você foi convidado para se cadastrar como recrutador na plataforma Hirefy pela empresa <strong>{data["company_name"]}</strong>.</p>
-        <p>Para completar seu cadastro e definir sua senha, acesse o link abaixo:</p>
-        <p><a href="{invite_link}">{invite_link}</a></p>
-        <p>Atenciosamente,<br>Equipe Hirefy</p>
-        '''
-        
-        try:
-            send_mail(
-                subject,
-                message,
-                getattr(settings, "DEFAULT_FROM_EMAIL", None),
-                [user.email],
-                fail_silently=False,
-                html_message=html_message,
-            )
-        except Exception as e:
-            return Response({'detail': f'Erro ao enviar e-mail: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-        return Response({'detail': 'Convite enviado com sucesso.'}, status=status.HTTP_201_CREATED)
->>>>>>> 124ef22 (fix: resolve frontend typecheck errors and improve email templates)
 
         if not nome:
             raise ValidationError({"nome": "Nome é obrigatório."})
