@@ -7,6 +7,7 @@ def send_hirefy_email(subject, template_name, context, to_email):
     """
     Helper function to send HTML emails with Hirefy branding.
     """
+    context['frontend_url'] = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
     html_content = render_to_string(template_name, context)
     text_content = strip_tags(html_content)
     

@@ -273,10 +273,10 @@ export function CompanySettings() {
               </button>
               <button
                 type="submit"
-                disabled={mutation.isLoading}
+                disabled={mutation.isPending}
                 className="w-full sm:w-auto px-8 py-2.5 bg-primary text-primary-foreground rounded-lg hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20 order-1 sm:order-3"
               >
-                {mutation.isLoading ? (
+                {mutation.isPending ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Salvando...

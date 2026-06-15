@@ -171,7 +171,9 @@ export function CandidateManagement() {
                   {getStatusBadge(app.status)}
                 </div>
                 
-                <h3 className="font-bold text-lg text-foreground mb-1">{app.student_name}</h3>
+                <Link href={`/candidatos/${app.student_user_id}`}>
+                  <h3 className="font-bold text-lg text-foreground mb-1 hover:text-primary transition-colors cursor-pointer">{app.student_name}</h3>
+                </Link>
                 <p className="text-sm text-primary font-medium mb-4 flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5" /> {app.job_title}
                 </p>

@@ -34,7 +34,7 @@ export function JobForm() {
   });
 
   // Busca dados se estiver editando
-  const { isLoading: isLoadingJob } = useQuery({
+  const { data: jobData, isLoading: isLoadingJob } = useQuery({
     queryKey: ["job", id],
     queryFn: async () => {
       if (!id) return null;
@@ -42,10 +42,13 @@ export function JobForm() {
       return response.data;
     },
     enabled: isEditing,
-    onSuccess: (data) => {
-      if (data) setFormData(data);
-    }
   });
+
+  useEffect(() => {
+    if (jobData) {
+      setFormData(jobData);
+    }
+  }, [jobData]);
 
   const handleGupyImport = async () => {
     if (!gupyUrl) {
@@ -435,10 +438,10 @@ export function JobForm() {
                 </button>
                 <button
                   type="submit"
-                  disabled={mutation.isLoading}
+                  disabled={mutation.isPending}
                   className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity shadow-sm font-medium w-full md:w-auto text-center flex items-center justify-center gap-2"
                 >
-                  {mutation.isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                   {isEditing ? "Salvar Alterações" : "Publicar Vaga"}
                 </button>
               </div>

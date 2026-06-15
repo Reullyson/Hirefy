@@ -4,5 +4,5 @@
     <p>Sua candidatura para a vaga <strong>{{ job_title }}</strong> na empresa <strong>{{ company_name }}</strong> foi registrada com sucesso.</p>
     <p>Data da candidatura: {{ application_date|date:"d/m/Y H:i" }}</p>
     <p>Acompanhe o status da sua candidatura no painel do aluno.</p>
-    <a href="#" class="button">Ver Minhas Vagas</a>
+    <a href="{{ frontend_url }}/aluno" class="button">Ver Minhas Vagas</a>
 {% endblock %}

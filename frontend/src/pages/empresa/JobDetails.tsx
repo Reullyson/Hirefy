@@ -311,7 +311,7 @@ export function JobDetails() {
                                 setNewStatus(e.target.value);
                                 setFeedbackText(app.feedback || "");
                               }}
-                              disabled={updateStatusMutation.isLoading}
+                              disabled={updateStatusMutation.isPending}
                               className="text-xs border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary bg-background"
                             >
                               <option value="PENDENTE">Mudar Status</option>
@@ -358,7 +358,7 @@ export function JobDetails() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setSelectedApp(null)} disabled={updateStatusMutation.isLoading}>
+                      <Button variant="outline" onClick={() => setSelectedApp(null)} disabled={updateStatusMutation.isPending}>
                         Cancelar
                       </Button>
                       <Button 
@@ -367,9 +367,9 @@ export function JobDetails() {
                           status: newStatus, 
                           feedback: feedbackText 
                         })}
-                        disabled={updateStatusMutation.isLoading}
+                        disabled={updateStatusMutation.isPending}
                       >
-                        {updateStatusMutation.isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                         Confirmar e Enviar
                       </Button>
                     </DialogFooter>
@@ -409,10 +409,10 @@ export function JobDetails() {
                 <div className="space-y-4">
                   <button
                     onClick={() => applyMutation.mutate()}
-                    disabled={applyMutation.isLoading || job.user_has_applied}
+                    disabled={applyMutation.isPending || job.user_has_applied}
                     className="w-full mt-6 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-70 disabled:bg-muted disabled:text-muted-foreground"
                   >
-                    {applyMutation.isLoading ? (
+                    {applyMutation.isPending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : job.user_has_applied ? (
                       <>
