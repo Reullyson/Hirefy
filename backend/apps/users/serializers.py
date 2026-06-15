@@ -12,11 +12,23 @@ class ExperienceSerializer(serializers.ModelSerializer):
         model = Experience
         fields = ['id', 'title', 'institution', 'description', 'start_date', 'end_date', 'is_current']
 
+    def to_internal_value(self, data):
+        # Converter strings vazias em None para campos de data
+        if 'end_date' in data and data['end_date'] == '':
+            data['end_date'] = None
+        return super().to_internal_value(data)
+
 
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ['id', 'name', 'issuer', 'workload', 'completion_date', 'certificate_url']
+
+    def to_internal_value(self, data):
+        # Converter strings vazias em None para campos de data
+        if 'completion_date' in data and data['completion_date'] == '':
+            data['completion_date'] = None
+        return super().to_internal_value(data)
 
 
 class UserSerializer(serializers.ModelSerializer):
