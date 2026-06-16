@@ -56,6 +56,7 @@ class JobViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+
         if not user.is_authenticated:
             return Job.objects.filter(status='ATIVA')
 
@@ -73,53 +74,106 @@ class JobViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         try:
             company = self.request.user.company
+
             if company.status != 'APROVADA':
                 raise ValidationError({
                     "detail": "Sua empresa precisa estar homologada."
                 })
+
             serializer.save(company=company)
+
         except Company.DoesNotExist:
             raise ValidationError({
                 "detail": "O recrutador precisa cadastrar uma empresa."
             })
 
+    @action(detail=True, methods=['patch'], url_path='aprovar')
+    def aprovar(self, request, pk=None):
+        if request.user.user_type != 'ADMIN':
+            raise ValidationError({
+                "detail": "Apenas administradores podem aprovar vagas."
+            })
+
+        job = self.get_object()
+        job.status = 'ATIVA'
+        job.save(update_fields=['status'])
+
+        return Response(
+            {"detail": "Vaga aprovada com sucesso."},
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['patch'], url_path='rejeitar')
+    def rejeitar(self, request, pk=None):
+        if request.user.user_type != 'ADMIN':
+            raise ValidationError({
+                "detail": "Apenas administradores podem rejeitar vagas."
+            })
+
+        job = self.get_object()
+        job.status = 'ENCERRADA'
+        job.save(update_fields=['status'])
+
+        return Response(
+            {"detail": "Vaga rejeitada com sucesso."},
+            status=status.HTTP_200_OK
+        )
+
     @action(detail=False, methods=['post'], url_path='import-gupy')
     def import_gupy(self, request):
         url = request.data.get('url')
         if not url:
-            return Response({'detail': 'URL is required'}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {'detail': 'URL is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             company = self.request.user.company
             if company.status != 'APROVADA':
-                return Response({'detail': 'Sua empresa precisa estar homologada.'}, status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    {'detail': 'Sua empresa precisa estar homologada.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         except Company.DoesNotExist:
-            return Response({'detail': 'O recrutador precisa cadastrar uma empresa.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {'detail': 'O recrutador precisa cadastrar uma empresa.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-        # Call scraping service
         try:
-            # Assuming scraping service is running on port 5000 as configured in background tasks
             scraping_url = f"http://localhost:5000/scrape-gupy?url={url}"
             response = requests.get(scraping_url, timeout=30)
+
             if response.status_code != 200:
-                return Response({'detail': 'Erro ao acessar o serviço de extração.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
+                return Response(
+                    {'detail': 'Erro ao acessar o serviço de extração.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
             job_data = response.json()
             if 'error' in job_data:
-                return Response({'detail': job_data['error']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(
+                    {'detail': job_data['error']},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
-            # Use serializer to save and clean HTML
             serializer = self.get_serializer(data=job_data)
             serializer.is_valid(raise_exception=True)
             serializer.save(company=company, gupy_link=url)
-            
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
-        except requests.exceptions.RequestException as e:
-            return Response({'detail': f'Erro na comunicação com o serviço de scraping: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        except Exception as e:
-            return Response({'detail': f'Erro interno: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except requests.exceptions.RequestException as e:
+            return Response(
+                {'detail': f'Erro na comunicação com o serviço de scraping: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            return Response(
+                {'detail': f'Erro interno: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class ApplicationViewSet(viewsets.ModelViewSet):
     queryset = Application.objects.all()

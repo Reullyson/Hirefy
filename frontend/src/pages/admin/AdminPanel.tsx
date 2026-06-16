@@ -35,6 +35,7 @@ type ActiveSection =
   | "companies"
   | "company-detail"
   | "jobs"
+  | "job-detail"
   | "admins"
   | "settings";
 
@@ -63,7 +64,8 @@ type CompanyDetails = CompanyItem & {
 export default function App() {
   const [active, setActive] = useState<ActiveSection>("dashboard");
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
-
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  
   const handleLogout = () => {
     localStorage.removeItem("hirefy_access_token");
     localStorage.removeItem("hirefy_refresh_token");
@@ -164,6 +166,7 @@ export default function App() {
               {active === "companies" && "Homologação de Empresas"}
               {active === "company-detail" && "Dados da Empresa"}
               {active === "jobs" && "Moderação de Vagas"}
+              {active === "job-detail" && "Dados da Vaga"}
               {active === "admins" && "Gestão de Administradores"}
               {active === "settings" && "Configurações do Usuário"}
             </h2>
@@ -188,7 +191,21 @@ export default function App() {
               onBack={() => setActive("companies")}
             />
           )}
-          {active === "jobs" && <JobsPage />}
+          {active === "jobs" && (
+            <JobsPage
+              onOpenJob={(job: any) => {
+                setSelectedJob(job);
+                setActive("job-detail");
+              }}
+            />
+          )}
+
+          {active === "job-detail" && (
+            <JobDetailPage
+              job={selectedJob}
+              onBack={() => setActive("jobs")}
+            />
+          )}
           {active === "admins" && <AdminsPage />}
           {active === "settings" && <UserSettingsPage />}
         </section>
@@ -962,10 +979,13 @@ function CompaniesPage({ onOpenCompany }: { onOpenCompany: (company: any) => voi
     type: "success" | "error";
     message: string;
   } | null>(null);
+
   const [animatedId, setAnimatedId] = useState<{
     id: number | null;
     type: "approve" | "reject" | null;
   }>({ id: null, type: null });
+
+  const [statusById, setStatusById] = useState<Record<number, string>>({});
 
   const companies = data ?? [];
 
@@ -974,12 +994,22 @@ function CompaniesPage({ onOpenCompany }: { onOpenCompany: (company: any) => voi
     setTimeout(() => setFeedback(null), 3500);
   };
 
+  const getEffectiveStatus = (company: any) => {
+    return statusById[company.id] || company.status;
+  };
+
   const handleApprove = async (company: any) => {
     try {
       setActioningId(company.id);
       setAnimatedId({ id: company.id, type: "approve" });
 
       await companyService.approve(company.id);
+
+      setStatusById((prev) => ({
+        ...prev,
+        [company.id]: "APROVADA",
+      }));
+
       await refetch();
 
       showFeedback("success", `Empresa "${company.name}" aprovada com sucesso.`);
@@ -998,6 +1028,12 @@ function CompaniesPage({ onOpenCompany }: { onOpenCompany: (company: any) => voi
       setAnimatedId({ id: company.id, type: "reject" });
 
       await companyService.reject(company.id);
+
+      setStatusById((prev) => ({
+        ...prev,
+        [company.id]: "REJEITADA",
+      }));
+
       await refetch();
 
       showFeedback("success", `Empresa "${company.name}" rejeitada.`);
@@ -1025,15 +1061,21 @@ function CompaniesPage({ onOpenCompany }: { onOpenCompany: (company: any) => voi
 
   return (
     <div className="panel">
-      <h3>Homologação de Empresas</h3>
-      <p className="muted">
-        Empresas cadastradas no sistema para aprovação ou rejeição.
-      </p>
+      <div className="detail-header" style={{ marginBottom: "8px" }}>
+        <div>
+          <h3>Homologação de Empresas</h3>
+          <p className="muted">
+            Empresas cadastradas no sistema para aprovação ou rejeição.
+          </p>
+        </div>
+      </div>
 
       {feedback && (
         <div
           className={`admin-feedback ${
-            feedback.type === "success" ? "admin-feedback-success" : "admin-feedback-error"
+            feedback.type === "success"
+              ? "admin-feedback-success"
+              : "admin-feedback-error"
           }`}
         >
           {feedback.message}
@@ -1045,65 +1087,106 @@ function CompaniesPage({ onOpenCompany }: { onOpenCompany: (company: any) => voi
           Nenhuma empresa encontrada.
         </div>
       ) : (
-        companies.map((company: any) => (
-          <div
-            key={company.id}
-            className={`request-card company-action-card ${
-              animatedId.id === company.id
-                ? animatedId.type === "approve"
-                  ? "company-approved"
-                  : "company-rejected"
-                : ""
-            }`}
-          >
-            <div className="company-info">
-              <strong>{company.name}</strong>
+        <div style={{ display: "grid", gap: "14px" }}>
+          {companies.map((company: any) => {
+            const currentStatus = getEffectiveStatus(company);
+            const isApproved = currentStatus === "APROVADA";
+            const isRejected = currentStatus === "REJEITADA";
+            const isDone = isApproved || isRejected;
 
-              <div className="company-details">
-                <p>CNPJ: {company.cnpj}</p>
-                <p>Status: {company.status}</p>
-                <p>Recrutador: {company.recruiter_email || "-"}</p>
+            return (
+              <div
+                key={company.id}
+                className={`request-card company-action-card ${
+                  animatedId.id === company.id
+                    ? animatedId.type === "approve"
+                      ? "company-approved"
+                      : "company-rejected"
+                    : ""
+                }`}
+              >
+                <div className="company-row">
+                  <div className="company-main">
+                    <div className="company-title-row">
+                      <strong className="company-name">{company.name}</strong>
+
+                      {isApproved ? (
+                        <span className="company-status approved">
+                          ✓ Aprovada
+                        </span>
+                      ) : isRejected ? (
+                        <span className="company-status rejected">
+                          ✕ Rejeitada
+                        </span>
+                      ) : (
+                        <span className={`badge ${currentStatus === "PENDENTE" ? "warning" : "success"}`}>
+                          {currentStatus}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="company-details">
+                      <p>CNPJ: {company.cnpj}</p>
+                      <p>Recrutador: {company.recruiter_email || "-"}</p>
+
+                      {isDone && (
+                        <p className="company-note">
+                          {isApproved
+                            ? "Esta empresa já foi aprovada."
+                            : "Esta empresa já foi rejeitada."}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="company-actions">
+                    <button
+                      className="small-button primary"
+                      onClick={() => onOpenCompany(company)}
+                      type="button"
+                    >
+                      <Info size={16} /> Ver dados
+                    </button>
+
+                    <button
+                      className="small-button primary"
+                      onClick={() => handleApprove(company)}
+                      disabled={actioningId === company.id || isDone}
+                      type="button"
+                    >
+                      {actioningId === company.id ? (
+                        "Processando..."
+                      ) : isApproved ? (
+                        "Já aprovada"
+                      ) : (
+                        <>
+                          <CheckCircle2 size={16} /> Aprovar
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      className="small-button secondary"
+                      onClick={() => handleReject(company)}
+                      disabled={actioningId === company.id || isDone}
+                      type="button"
+                    >
+                      {actioningId === company.id ? (
+                        "Processando..."
+                      ) : isRejected ? (
+                        "Já rejeitada"
+                      ) : (
+                        <>
+                          <XCircle size={16} /> Rejeitar
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-
-            <div className="action-row">
-              <button
-                className="small-button primary"
-                onClick={() => onOpenCompany(company)}
-              >
-                <Info size={16} /> Ver dados
-              </button>
-
-              <button
-                className="small-button primary"
-                onClick={() => handleApprove(company)}
-                disabled={actioningId === company.id}
-              >
-                {actioningId === company.id ? (
-                  "Processando..."
-                ) : (
-                  <>
-                    <CheckCircle2 size={16} /> Aprovar
-                  </>
-                )}
-              </button>
-
-              <button
-                className="small-button secondary"
-                onClick={() => handleReject(company)}
-                disabled={actioningId === company.id}
-              >
-                {actioningId === company.id ? (
-                  "Processando..."
-                ) : (
-                  <>
-                    <XCircle size={16} /> Rejeitar
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        ))
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -1155,7 +1238,131 @@ function CompanyDetailPage({
   );
 }
 
-function JobsPage() {
+function JobDetailPage({
+  job,
+  onBack,
+}: {
+  job: any;
+  onBack: () => void;
+}) {
+  if (!job) {
+    return (
+      <div className="panel">
+        Nenhuma vaga selecionada.
+      </div>
+    );
+  }
+
+  return (
+    <div className="panel">
+      <div className="detail-header">
+        <div>
+          <h3>{job.title}</h3>
+
+          <p className="muted">
+            Dados completos da vaga cadastrada
+          </p>
+        </div>
+
+        <button
+          className="small-button secondary"
+          onClick={onBack}
+        >
+          <ChevronRight size={16} />
+          Voltar
+        </button>
+      </div>
+
+      <div className="detail-grid">
+        <div className="detail-card">
+          <strong>Informações gerais</strong>
+
+          <p>Título: {job.title}</p>
+
+          <p>
+            Empresa: {job.company_name || "-"}
+          </p>
+
+          <p>
+            Localização: {job.location || "-"}
+          </p>
+
+          <p>
+            Modalidade: {job.modality || "-"}
+          </p>
+
+          <p>
+            Tipo de contrato: {job.contract_type || "-"}
+          </p>
+
+          <p>
+            Status: {job.status}
+          </p>
+        </div>
+
+        <div className="detail-card">
+          <strong>Descrição da vaga</strong>
+
+          <p>
+            {job.description || "Não informada."}
+          </p>
+        </div>
+
+        <div className="detail-card">
+          <strong>Requisitos</strong>
+
+          <p>
+            {job.requirements || "Não informados."}
+          </p>
+        </div>
+
+        <div className="detail-card">
+          <strong>Benefícios</strong>
+
+          <p>
+            {job.benefits || "Não informados."}
+          </p>
+        </div>
+
+        <div className="detail-card">
+          <strong>Faixa salarial</strong>
+
+          <p>
+            {job.salary || "Não informada."}
+          </p>
+        </div>
+
+        <div className="detail-card">
+          <strong>Informações técnicas</strong>
+
+          <p>ID: {job.id}</p>
+
+          <p>
+            Criada em:
+            {" "}
+            {job.created_at
+              ? new Date(job.created_at).toLocaleString("pt-BR")
+              : "-"}
+          </p>
+
+          <p>
+            Atualizada em:
+            {" "}
+            {job.updated_at
+              ? new Date(job.updated_at).toLocaleString("pt-BR")
+              : "-"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JobsPage({
+  onOpenJob,
+}: {
+  onOpenJob: (job: any) => void;
+}) {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-jobs"],
     queryFn: async () => {
@@ -1291,6 +1498,14 @@ function JobsPage() {
 
                 <td>
                   <div className="actions">
+                    <button
+                      className="small-button primary"
+                      onClick={() => onOpenJob(job)}
+                      type="button"
+                    >
+                      <Info size={16} />
+                      Ver detalhes
+                    </button>
                     <button
                       className="icon-button"
                       onClick={() => handleApprove(job)}
